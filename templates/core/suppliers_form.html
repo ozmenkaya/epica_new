@@ -65,12 +65,21 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       // Check if supplier exists via AJAX
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
       fetch('{% url "check_supplier_email" %}?email=' + encodeURIComponent(email), {
+        method: 'GET',
+        credentials: 'same-origin',
         headers: {
-          'X-Requested-With': 'XMLHttpRequest'
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': csrftoken
         }
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
       .then(data => {
         if (data.exists) {
           alertMessage.textContent = 'Bu email adresiyle "' + data.name + '" isimli tedarikçi zaten mevcut. Kaydedildiğinde bu tedarikçi organizasyonunuza eklenecek.';
