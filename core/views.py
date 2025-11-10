@@ -441,6 +441,22 @@ def suppliers_create(request):
 	if request.method == "POST":
 		form = SupplierForm(request.POST)
 		if form.is_valid():
+			email = form.cleaned_data.get("email")
+			# Check if supplier with this email already exists
+			existing_supplier = None
+			if email:
+				existing_supplier = Supplier.objects.filter(email=email).first()
+			
+			if existing_supplier:
+				# Add existing supplier to this organization
+				if org in existing_supplier.organizations.all():
+					messages.warning(request, f"Tedarikçi '{existing_supplier.name}' zaten bu organizasyonda mevcut.")
+				else:
+					existing_supplier.organizations.add(org)
+					messages.success(request, f"Mevcut tedarikçi '{existing_supplier.name}' organizasyonunuza eklendi.")
+				return redirect("suppliers_list")
+			
+			# Create new supplier
 			sup = form.save(commit=False)
 			sup.save()
 			sup.organizations.add(org)
