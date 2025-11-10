@@ -14,6 +14,7 @@ urlpatterns = [
     path("suppliers/new/", views.suppliers_create, name="suppliers_create"),
     path("suppliers/<int:pk>/edit/", views.suppliers_edit, name="suppliers_edit"),
     path("suppliers/<int:pk>/delete/", views.suppliers_delete, name="suppliers_delete"),
+    path("suppliers/check-email/", views.check_supplier_email, name="check_supplier_email"),
     path("tickets/", views.tickets_list, name="tickets_list"),
     path("tickets/new/", views.tickets_new, name="tickets_new"),
     path("tickets/<int:pk>/", views.ticket_detail_owner, name="ticket_detail_owner"),

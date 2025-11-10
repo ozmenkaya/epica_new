@@ -649,6 +649,24 @@ def suppliers_delete(request, pk: int):
 	return render(request, "core/suppliers_confirm_delete.html", {"obj": obj, "org": org})
 
 
+@tenant_role_required([Membership.Role.ADMIN, Membership.Role.OWNER])
+def check_supplier_email(request):
+	"""AJAX endpoint to check if supplier with email exists."""
+	from django.http import JsonResponse
+	email = request.GET.get("email", "").strip()
+	if not email:
+		return JsonResponse({"exists": False})
+	
+	supplier = Supplier.objects.filter(email=email).first()
+	if supplier:
+		return JsonResponse({
+			"exists": True,
+			"name": supplier.name,
+			"id": supplier.id
+		})
+	return JsonResponse({"exists": False})
+
+
 from django.contrib.auth.decorators import login_required
 
 

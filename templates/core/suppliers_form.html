@@ -30,7 +30,11 @@
         </form>
       </div>
     {% else %}
-      <form method="post" novalidate>
+      <div id="existing-supplier-alert" class="alert alert-info d-none mb-3">
+        <i class="bi bi-info-circle"></i>
+        <span id="existing-supplier-message"></span>
+      </div>
+      <form method="post" novalidate id="supplier-form">
         {% csrf_token %}
         {% for field in form %}
           {% bootstrap_field field %}
@@ -43,4 +47,69 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const emailInput = document.getElementById('id_email');
+  const alertBox = document.getElementById('existing-supplier-alert');
+  const alertMessage = document.getElementById('existing-supplier-message');
+  const loginFields = ['id_login_username', 'id_login_password1', 'id_login_password2'];
+  
+  if (emailInput) {
+    emailInput.addEventListener('blur', function() {
+      const email = this.value.trim();
+      if (!email) {
+        alertBox.classList.add('d-none');
+        showLoginFields();
+        return;
+      }
+      
+      // Check if supplier exists via AJAX
+      fetch('{% url "check_supplier_email" %}?email=' + encodeURIComponent(email), {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.exists) {
+          alertMessage.textContent = 'Bu email adresiyle "' + data.name + '" isimli tedarikçi zaten mevcut. Kaydedildiğinde bu tedarikçi organizasyonunuza eklenecek.';
+          alertBox.classList.remove('d-none');
+          alertBox.classList.remove('alert-info');
+          alertBox.classList.add('alert-warning');
+          hideLoginFields();
+        } else {
+          alertBox.classList.add('d-none');
+          showLoginFields();
+        }
+      })
+      .catch(error => {
+        console.error('Error checking email:', error);
+        alertBox.classList.add('d-none');
+        showLoginFields();
+      });
+    });
+  }
+  
+  function hideLoginFields() {
+    loginFields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        const formGroup = field.closest('.mb-3');
+        if (formGroup) formGroup.style.display = 'none';
+      }
+    });
+  }
+  
+  function showLoginFields() {
+    loginFields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        const formGroup = field.closest('.mb-3');
+        if (formGroup) formGroup.style.display = '';
+      }
+    });
+  }
+});
+</script>
 {% endblock %}
