@@ -1434,8 +1434,11 @@ class CategorySupplierRuleForm(forms.ModelForm):
 		self._organization = kwargs.pop("organization", None)
 		self._category = kwargs.pop("category", None)
 		super().__init__(*args, **kwargs)
-		# Scope suppliers to organization
-		if self._organization is not None:
+		# Scope suppliers to category's suppliers (already filtered by organization)
+		if self._category is not None:
+			self.fields["suppliers"].queryset = self._category.suppliers.all().order_by("name")
+		elif self._organization is not None:
+			# Fallback: show all organization suppliers if category not provided
 			self.fields["suppliers"].queryset = Supplier.objects.filter(organizations=self._organization).order_by("name")
 		# Build choices for field_name as single select
 		all_fields = []
