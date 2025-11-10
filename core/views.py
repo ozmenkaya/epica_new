@@ -275,8 +275,16 @@ class CategoryForm(forms.ModelForm):
 @tenant_role_required([Membership.Role.OWNER])
 def categories_list(request):
 	org = getattr(request, "tenant", None)
-	# Get root categories (no parent) with their children
-	root_categories = Category.objects.filter(organization=org, parent__isnull=True).prefetch_related("suppliers", "children__suppliers").order_by("name")
+	# Get root categories (no parent) with all descendants
+	root_categories = Category.objects.filter(
+		organization=org, 
+		parent__isnull=True
+	).prefetch_related(
+		"suppliers", 
+		"children__suppliers",
+		"children__children__suppliers",
+		"children__children__children__suppliers"  # Support up to 3 levels deep
+	).order_by("name")
 	return render(request, "core/categories_list.html", {"root_categories": root_categories, "org": org})
 
 

@@ -1,0 +1,25 @@
+{% load i18n %}
+{% for child in children %}
+<tr class="table-secondary">
+  <td style="padding-left: {{ level|add:2 }}rem;">
+    <span class="text-muted">{% for i in level|ljust:"0" %}└─{% endfor %}</span> {{ child.name }}
+    {% if child.children.all %}
+      <span class="badge bg-info text-dark ms-2">{{ child.children.all|length }} alt</span>
+    {% endif %}
+  </td>
+  <td class="text-muted">
+    {% with names=child.suppliers.all %}
+      {% for s in names %}{% if not forloop.first %}, {% endif %}{{ s.name }}{% empty %}-{% endfor %}
+    {% endwith %}
+  </td>
+  <td class="text-end d-flex gap-2 justify-content-end">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'category_form_fields_list' child.pk %}">{% trans "Form Alanları" %}</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'category_rules_list' child.pk %}">{% trans "Kurallar" %}</a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'categories_edit' child.pk %}">{% trans "Düzenle" %}</a>
+    <a class="btn btn-sm btn-outline-danger" href="{% url 'categories_delete' child.pk %}">{% trans "Sil" %}</a>
+  </td>
+</tr>
+{% if child.children.all %}
+  {% include "core/_category_children.html" with children=child.children.all level=level|add:1 %}
+{% endif %}
+{% endfor %}

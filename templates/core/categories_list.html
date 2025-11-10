@@ -38,24 +38,7 @@
               <a class="btn btn-sm btn-outline-danger" href="{% url 'categories_delete' c.pk %}">{% trans "Sil" %}</a>
             </td>
           </tr>
-          {% for child in c.children.all %}
-          <tr class="table-secondary">
-            <td class="ps-5">
-              <span class="text-muted">└─</span> {{ child.name }}
-            </td>
-            <td class="text-muted">
-              {% with names=child.suppliers.all %}
-                {% for s in names %}{% if not forloop.first %}, {% endif %}{{ s.name }}{% empty %}-{% endfor %}
-              {% endwith %}
-            </td>
-            <td class="text-end d-flex gap-2 justify-content-end">
-              <a class="btn btn-sm btn-outline-secondary" href="{% url 'category_form_fields_list' child.pk %}">{% trans "Form Alanları" %}</a>
-              <a class="btn btn-sm btn-outline-secondary" href="{% url 'category_rules_list' child.pk %}">{% trans "Kurallar" %}</a>
-              <a class="btn btn-sm btn-outline-primary" href="{% url 'categories_edit' child.pk %}">{% trans "Düzenle" %}</a>
-              <a class="btn btn-sm btn-outline-danger" href="{% url 'categories_delete' child.pk %}">{% trans "Sil" %}</a>
-            </td>
-          </tr>
-          {% endfor %}
+          {% include "core/_category_children.html" with children=c.children.all level=1 %}
           {% empty %}
             <tr><td colspan="3" class="text-center text-muted">{% trans "Henüz kategori yok." %}</td></tr>
           {% endfor %}
