@@ -798,6 +798,7 @@ def supplier_orders_list(request):
 
 @login_required
 def supplier_order_detail(request, pk: int):
+	sup = getattr(request.user, "supplier_profile", None)
 	if not sup:
 		return redirect("home")
 	org = _get_supplier_org(sup, request)
@@ -836,6 +837,7 @@ def supplier_order_detail(request, pk: int):
 
 @login_required
 def supplier_quotes_list(request):
+	sup = getattr(request.user, "supplier_profile", None)
 	if not sup:
 		return redirect("home")
 	org = _get_supplier_org(sup, request)
@@ -1786,6 +1788,7 @@ def customer_requests_detail(request, pk: int):
 
 @login_required
 def supplier_requests_detail(request, pk: int):
+	sup = getattr(request.user, "supplier_profile", None)
 	if not sup:
 		return redirect("home")
 	org = _get_supplier_org(sup, request)
@@ -2023,6 +2026,7 @@ from django.views.decorators.http import require_http_methods
 
 @login_required
 def supplier_products_list(request):
+	sup = getattr(request.user, "supplier_profile", None)
 	if not sup:
 		return redirect("home")
 	org = _get_supplier_org(sup, request)
@@ -2035,6 +2039,7 @@ def supplier_products_list(request):
 
 @login_required
 def supplier_products_new(request):
+	sup = getattr(request.user, "supplier_profile", None)
 	if not sup:
 		return redirect("home")
 	org = _get_supplier_org(sup, request)
@@ -2056,6 +2061,7 @@ def supplier_products_new(request):
 
 @login_required
 def supplier_products_edit(request, pk: int):
+	sup = getattr(request.user, "supplier_profile", None)
 	if not sup:
 		return redirect("home")
 	org = _get_supplier_org(sup, request)
@@ -2075,6 +2081,7 @@ def supplier_products_edit(request, pk: int):
 
 @login_required
 def supplier_products_delete(request, pk: int):
+	sup = getattr(request.user, "supplier_profile", None)
 	if not sup:
 		return redirect("home")
 	org = _get_supplier_org(sup, request)
