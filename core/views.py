@@ -163,12 +163,19 @@ def customers_create(request):
 
 
 class SupplierForm(forms.ModelForm):
-	login_username = forms.CharField(label="Kullanıcı Adı", required=False)
-	login_password1 = forms.CharField(label="Şifre", required=False, widget=forms.PasswordInput)
-	login_password2 = forms.CharField(label="Şifre (tekrar)", required=False, widget=forms.PasswordInput)
+	login_username = forms.CharField(label="Kullanıcı Adı", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+	login_password1 = forms.CharField(label="Şifre", required=False, widget=forms.PasswordInput(attrs={"class": "form-control"}))
+	login_password2 = forms.CharField(label="Şifre (tekrar)", required=False, widget=forms.PasswordInput(attrs={"class": "form-control"}))
+	
 	class Meta:
 		model = Supplier
-		fields = ["name", "email", "phone", "notes"]
+		fields = ["name", "email", "phone", "notes", "login_username", "login_password1", "login_password2"]
+		widgets = {
+			"name": forms.TextInput(attrs={"class": "form-control"}),
+			"email": forms.EmailInput(attrs={"class": "form-control"}),
+			"phone": forms.TextInput(attrs={"class": "form-control"}),
+			"notes": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+		}
 
 	def __init__(self, *args, **kwargs):
 		self.is_existing = kwargs.pop("is_existing", False)
