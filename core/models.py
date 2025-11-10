@@ -137,7 +137,14 @@ class CategorySupplierRule(models.Model):
 	# Dynamic field condition (matches Ticket.extra_data)
 	field_name = models.CharField(max_length=100, blank=True, help_text="Category form field key (name)")
 	field_operator = models.CharField(max_length=20, blank=True, choices=(
-		("eq", "="), ("neq", "!="), ("contains", "contains"), ("in", "in (comma separated)")
+		("eq", "="), 
+		("neq", "!="), 
+		("gt", ">"), 
+		("gte", ">="), 
+		("lt", "<"), 
+		("lte", "<="), 
+		("contains", "içerir"), 
+		("in", "şunlardan biri (virgülle ayırın)")
 	))
 	field_value = models.CharField(max_length=255, blank=True)
 	suppliers = models.ManyToManyField('Supplier', related_name='category_rules', blank=True)
@@ -199,6 +206,42 @@ class CategorySupplierRule(models.Model):
 					else:
 						if all(str(val) != tv for tv in target_values):
 							matched = True
+				elif op == "gt":
+					# Greater than: value > target (numeric comparison)
+					if val is not None and target_values:
+						try:
+							val_num = float(val)
+							if any(val_num > float(tv) for tv in target_values):
+								matched = True
+						except (ValueError, TypeError):
+							pass
+				elif op == "gte":
+					# Greater than or equal: value >= target (numeric comparison)
+					if val is not None and target_values:
+						try:
+							val_num = float(val)
+							if any(val_num >= float(tv) for tv in target_values):
+								matched = True
+						except (ValueError, TypeError):
+							pass
+				elif op == "lt":
+					# Less than: value < target (numeric comparison)
+					if val is not None and target_values:
+						try:
+							val_num = float(val)
+							if any(val_num < float(tv) for tv in target_values):
+								matched = True
+						except (ValueError, TypeError):
+							pass
+				elif op == "lte":
+					# Less than or equal: value <= target (numeric comparison)
+					if val is not None and target_values:
+						try:
+							val_num = float(val)
+							if any(val_num <= float(tv) for tv in target_values):
+								matched = True
+						except (ValueError, TypeError):
+							pass
 				elif op == "contains":
 					if val is None:
 						continue
