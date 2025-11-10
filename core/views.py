@@ -149,10 +149,14 @@ def customers_create(request):
 				cust.user = user
 				cust.save(update_fields=["user"])
 				if p1:
-					messages.success(request, f"Müşteri girişi oluşturuldu: {uname}")
+					messages.success(request, f"Müşteri '{cust.name}' eklendi. Giriş: {uname}")
 				else:
-					messages.success(request, f"Müşteri girişi oluşturuldu. Kullanıcı adı: {uname} | Geçici şifre: {password}")
+					messages.success(request, f"Müşteri '{cust.name}' eklendi. Kullanıcı: {uname} | Şifre: {password}")
+			else:
+				messages.success(request, f"Müşteri '{cust.name}' başarıyla eklendi.")
 			return redirect("customers_list")
+		else:
+			messages.error(request, "Lütfen formu kontrol edin.")
 	else:
 		form = CustomerForm()
 	return render(request, "core/customers_form.html", {"form": form, "org": org})
@@ -264,7 +268,10 @@ def categories_create(request):
 			obj.organization = org
 			obj.save()
 			form.save_m2m()
+			messages.success(request, f"Kategori '{obj.name}' oluşturuldu.")
 			return redirect("categories_list")
+		else:
+			messages.error(request, "Lütfen formu kontrol edin.")
 	else:
 		form = CategoryForm(organization=org)
 	return render(request, "core/categories_form.html", {"form": form, "org": org})
@@ -277,8 +284,11 @@ def categories_edit(request, pk: int):
 	if request.method == "POST":
 		form = CategoryForm(request.POST, instance=obj, organization=org)
 		if form.is_valid():
-			form.save()
+			cat = form.save()
+			messages.success(request, f"Kategori '{cat.name}' güncellendi.")
 			return redirect("categories_list")
+		else:
+			messages.error(request, "Lütfen formu kontrol edin.")
 	else:
 		form = CategoryForm(instance=obj, organization=org)
 	return render(request, "core/categories_form.html", {"form": form, "org": org})
@@ -288,7 +298,9 @@ def categories_delete(request, pk: int):
 	org = getattr(request, "tenant", None)
 	obj = get_object_or_404(Category, pk=pk, organization=org)
 	if request.method == "POST":
+		name = obj.name
 		obj.delete()
+		messages.success(request, f"Kategori '{name}' silindi.")
 		return redirect("categories_list")
 	return render(request, "core/categories_confirm_delete.html", {"obj": obj, "org": org})
 
@@ -417,10 +429,14 @@ def suppliers_create(request):
 				sup.user = user
 				sup.save(update_fields=["user"])
 				if p1:
-					messages.success(request, f"Tedarikçi girişi oluşturuldu: {uname}")
+					messages.success(request, f"Tedarikçi '{sup.name}' eklendi. Giriş: {uname}")
 				else:
-					messages.success(request, f"Tedarikçi girişi oluşturuldu. Kullanıcı adı: {uname} | Geçici şifre: {password}")
+					messages.success(request, f"Tedarikçi '{sup.name}' eklendi. Kullanıcı: {uname} | Şifre: {password}")
+			else:
+				messages.success(request, f"Tedarikçi '{sup.name}' başarıyla eklendi.")
 			return redirect("suppliers_list")
+		else:
+			messages.error(request, "Lütfen formu kontrol edin.")
 	else:
 		form = SupplierForm()
 	return render(request, "core/suppliers_form.html", {"form": form, "org": org})
@@ -462,7 +478,11 @@ def customers_edit(request, pk: int):
 					if changed:
 						user.save()
 						messages.success(request, "Müşteri giriş bilgileri güncellendi.")
+			else:
+				messages.success(request, f"Müşteri '{cust.name}' güncellendi.")
 			return redirect("customers_list")
+		else:
+			messages.error(request, "Lütfen formu kontrol edin.")
 	else:
 		form = CustomerForm(instance=obj)
 	return render(request, "core/customers_form.html", {"form": form, "org": org})
@@ -473,7 +493,9 @@ def customers_delete(request, pk: int):
 	org = getattr(request, "tenant", None)
 	obj = get_object_or_404(Customer, pk=pk, organization=org)
 	if request.method == "POST":
+		name = obj.name
 		obj.delete()
+		messages.success(request, f"Müşteri '{name}' silindi.")
 		return redirect("customers_list")
 	return render(request, "core/customers_confirm_delete.html", {"obj": obj, "org": org})
 
@@ -513,7 +535,11 @@ def suppliers_edit(request, pk: int):
 					if changed:
 						user.save()
 						messages.success(request, "Tedarikçi giriş bilgileri güncellendi.")
+			else:
+				messages.success(request, f"Tedarikçi '{sup.name}' güncellendi.")
 			return redirect("suppliers_list")
+		else:
+			messages.error(request, "Lütfen formu kontrol edin.")
 	else:
 		form = SupplierForm(instance=obj)
 	return render(request, "core/suppliers_form.html", {"form": form, "org": org})
@@ -524,7 +550,9 @@ def suppliers_delete(request, pk: int):
 	org = getattr(request, "tenant", None)
 	obj = get_object_or_404(Supplier, pk=pk, organization=org)
 	if request.method == "POST":
+		name = obj.name
 		obj.delete()
+		messages.success(request, f"Tedarikçi '{name}' silindi.")
 		return redirect("suppliers_list")
 	return render(request, "core/suppliers_confirm_delete.html", {"obj": obj, "org": org})
 

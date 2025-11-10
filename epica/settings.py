@@ -202,6 +202,16 @@ ROLE_LANDING_MAP = {
 LOGIN_REDIRECT_URL = '/portal/'
 LOGOUT_REDIRECT_URL = '/'
 
+# Messages framework - Bootstrap 5 compatible tags
+from django.contrib.messages import constants as messages_constants
+MESSAGE_TAGS = {
+    messages_constants.DEBUG: 'secondary',
+    messages_constants.INFO: 'info',
+    messages_constants.SUCCESS: 'success',
+    messages_constants.WARNING: 'warning',
+    messages_constants.ERROR: 'danger',
+}
+
 # Email Configuration
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
