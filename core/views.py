@@ -189,21 +189,13 @@ class SupplierForm(forms.ModelForm):
 			self.fields["login_password1"].widget = forms.HiddenInput()
 			self.fields["login_password2"].widget = forms.HiddenInput()
 
-	def _post_clean(self):
-		"""Override to skip unique validation for email field when creating new supplier."""
-		# Call parent but catch unique validation errors for email
-		try:
-			super()._post_clean()
-		except forms.ValidationError:
-			# If it's a new instance (not editing), skip email unique validation
-			if not self.instance.pk and 'email' in self.errors:
-				# Remove email errors - we'll handle duplicates in the view
-				if '__all__' in self.errors:
-					del self.errors['__all__']
-				if 'email' in self.errors:
-					del self.errors['email']
-			else:
-				raise
+	def validate_unique(self):
+		"""Override to skip unique validation - we handle it in the view."""
+		# Skip validation for new instances, view will check for duplicates
+		if not self.instance.pk:
+			return
+		# For existing instances, call parent
+		super().validate_unique()
 
 	def clean(self):
 		cleaned = super().clean()
