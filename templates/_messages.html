@@ -1,17 +1,19 @@
 {% if messages %}
   {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-      {% if message.tags == 'error' or message.tags == 'danger' %}
-        <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Error:"><use xlink:href="#exclamation-triangle-fill"/></svg>
-      {% elif message.tags == 'warning' %}
-        <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Warning:"><use xlink:href="#exclamation-triangle-fill"/></svg>
-      {% elif message.tags == 'success' %}
-        <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Success:"><use xlink:href="#check-circle-fill"/></svg>
-      {% else %}
-        <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Info:"><use xlink:href="#info-fill"/></svg>
-      {% endif %}
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show d-flex align-items-center" role="alert">
+      <div class="flex-grow-1">
+        {% if message.tags == 'danger' %}
+          <strong>Hata:</strong>
+        {% elif message.tags == 'warning' %}
+          <strong>Uyarı:</strong>
+        {% elif message.tags == 'success' %}
+          <strong>Başarılı:</strong>
+        {% else %}
+          <strong>Bilgi:</strong>
+        {% endif %}
+        {{ message }}
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
     </div>
   {% endfor %}
 {% endif %}
