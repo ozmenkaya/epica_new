@@ -124,6 +124,9 @@
               <table class="table table-sm align-middle mb-0" id="items-table">
                 <thead>
                   <tr>
+                    <th style="width:40px" class="text-center">
+                      <input type="checkbox" id="select-all-items" class="form-check-input" title="Tümünü Seç/Kaldır">
+                    </th>
                     <th>{% trans "Açıklama" %}</th>
                     <th class="text-end">{% trans "Tedarikçi Tutarı" %}</th>
                     <th style="width:110px" class="text-end">% {% trans "Kar" %}</th>
@@ -134,7 +137,7 @@
                 <tbody></tbody>
                 <tfoot>
                   <tr class="fw-bold">
-                    <td class="text-end" colspan="4">{% trans "Toplam Satış" %}</td>
+                    <td class="text-end" colspan="5">{% trans "Toplam Satış" %}</td>
                     <td class="text-end" id="grand-total">0.00</td>
                   </tr>
                 </tfoot>
@@ -166,7 +169,12 @@
       q.items.forEach(it => {
         const tr = document.createElement('tr');
         tr.setAttribute('data-line-total', it.line_total);
+        tr.setAttribute('data-item-id', it.id);
+        const isChecked = it.is_selected !== false; // Default to true if not set
         tr.innerHTML = `
+          <td class="text-center">
+            <input type="checkbox" name="item_selected_${it.id}" class="form-check-input item-checkbox" ${isChecked ? 'checked' : ''}>
+          </td>
           <td>${it.description}<br><small class="text-muted">${it.quantity} x ${it.unit_price}</small></td>
           <td class="text-end supplier-total">${it.line_total}</td>
           <td class="text-end"><input type="number" step="0.01" min="0" name="markup_pct_${it.id}" value="${it.prefill_pct || ''}" class="form-control form-control-sm text-end markup-pct-input" placeholder="%" /></td>
@@ -195,6 +203,8 @@
     function recalc(){
       var grand = 0.0;
       document.querySelectorAll('#items-table tbody tr').forEach(function(tr){
+        var checkbox = tr.querySelector('.item-checkbox');
+        var isSelected = checkbox && checkbox.checked;
         var base = parseFloat(tr.getAttribute('data-line-total')) || 0;
         var pctInput = tr.querySelector('.markup-pct-input');
         var pct = parseFloat(pctInput && pctInput.value) || 0;
@@ -202,11 +212,41 @@
         var sell = base + abs;
         tr.querySelector('.markup-abs').textContent = fmt(abs);
         tr.querySelector('.sell-total').textContent = fmt(sell);
-        grand += sell;
+        
+        // Only add to grand total if selected
+        if(isSelected){
+          grand += sell;
+        }
+        
+        // Visual feedback for unselected rows
+        if(!isSelected){
+          tr.style.opacity = '0.5';
+          tr.style.textDecoration = 'line-through';
+        } else {
+          tr.style.opacity = '1';
+          tr.style.textDecoration = 'none';
+        }
       });
       var g = document.getElementById('grand-total'); if(g) g.textContent = fmt(grand);
     }
-    document.addEventListener('input', function(e){ if(e.target.classList.contains('markup-pct-input')) recalc(); });
+    
+    // Handle select all checkbox
+    document.addEventListener('change', function(e){
+      if(e.target.id === 'select-all-items'){
+        const checked = e.target.checked;
+        document.querySelectorAll('.item-checkbox').forEach(function(cb){
+          cb.checked = checked;
+        });
+        recalc();
+      } else if(e.target.classList.contains('item-checkbox')){
+        recalc();
+      }
+    });
+    
+    document.addEventListener('input', function(e){ 
+      if(e.target.classList.contains('markup-pct-input')) recalc(); 
+    });
+    
     document.addEventListener('DOMContentLoaded', function(){
       // If quote select exists, hook change
       var select = document.getElementById('id_selected_quote');

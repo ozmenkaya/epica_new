@@ -1927,9 +1927,13 @@ def ticket_detail_owner(request, pk: int):
 			# Monetary accumulator with 2-decimal rounding
 			total = Decimal("0.00")
 			# Percentage based per-item markup: inputs named markup_pct_<item.id>
+			# Checkboxes named item_selected_<item.id>
 			for item in items:
 				pct_key = f"markup_pct_{item.id}"
+				select_key = f"item_selected_{item.id}"
 				raw_pct = request.POST.get(pct_key)
+				is_selected = select_key in request.POST
+				
 				try:
 					pct = Decimal(raw_pct) if raw_pct not in (None, "") else Decimal("0")
 				except Exception:
@@ -1941,10 +1945,14 @@ def ticket_detail_owner(request, pk: int):
 				OwnerQuoteAdjustment.objects.update_or_create(
 					ticket=obj,
 					quote_item=item,
-					defaults={"markup_amount": abs_markup},
+					defaults={
+						"markup_amount": abs_markup,
+						"is_selected": is_selected,
+					},
 				)
-				# Sum and keep total at 2 decimals
-				total = (total + item.line_total + abs_markup).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+				# Only add to total if item is selected
+				if is_selected:
+					total = (total + item.line_total + abs_markup).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 			# Remove global markup usage; ensure it's zeroed
 			obj.markup_amount = Decimal("0.00")
@@ -1970,7 +1978,7 @@ def ticket_detail_owner(request, pk: int):
 	# Prepare adjustments dict for pre-filling per-item markup inputs
 	# Prepare prefill for per-item markup inputs
 	# Build adjustments mapping for all quote items
-	adjs_map = {a.quote_item_id: a.markup_amount for a in obj.owner_adjustments.all()}
+	adjs_map = {a.quote_item_id: {"markup_amount": a.markup_amount, "is_selected": a.is_selected} for a in obj.owner_adjustments.all()}
 	quotes_data = []
 	cheapest_quote = None
 	highest_quote = None
@@ -1981,7 +1989,9 @@ def ticket_detail_owner(request, pk: int):
 			highest_quote = q
 		items_payload = []
 		for it in q.items.all():
-			markup_amt = adjs_map.get(it.id)
+			adj_data = adjs_map.get(it.id)
+			markup_amt = adj_data["markup_amount"] if adj_data else None
+			is_selected = adj_data["is_selected"] if adj_data else True  # Default to True
 			if markup_amt and it.line_total:
 				try:
 					pct = (markup_amt / it.line_total * Decimal("100")).quantize(Decimal("0.01"))
@@ -1996,6 +2006,7 @@ def ticket_detail_owner(request, pk: int):
 				"unit_price": str(it.unit_price),
 				"line_total": str(it.line_total),
 				"prefill_pct": str(pct) if pct is not None else None,
+				"is_selected": is_selected,
 			})
 		quotes_data.append({
 			"id": q.id,

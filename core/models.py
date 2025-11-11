@@ -481,6 +481,7 @@ class OwnerQuoteAdjustment(models.Model):
 	ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="owner_adjustments")
 	quote_item = models.ForeignKey(QuoteItem, on_delete=models.CASCADE, related_name="owner_adjustments")
 	markup_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+	is_selected = models.BooleanField(default=True, verbose_name="Müşteriye Gönder")
 
 	class Meta:
 		unique_together = (("ticket", "quote_item"),)
