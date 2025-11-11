@@ -2288,3 +2288,192 @@ def customer_products_list(request):
         "core/portal_customer_products_list.html",
         {"products": products, "customer": cust, "org": cust.organization},
     )
+
+
+# Email webhook for incoming supplier replies
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+
+@csrf_exempt
+def email_webhook(request):
+	"""
+	Webhook endpoint for incoming emails from suppliers.
+	Parses email and saves to TicketEmailReply model.
+	
+	Expected POST data (adapt based on email provider):
+	- from_email: sender email
+	- subject: email subject
+	- body: email body text
+	- ticket_id: optional, extracted from subject or body
+	"""
+	if request.method != "POST":
+		return JsonResponse({"error": "Method not allowed"}, status=405)
+	
+	try:
+		# Parse incoming data (adjust based on email service provider)
+		# Example for Mailgun webhook format
+		if request.content_type == "application/json":
+			data = json.loads(request.body)
+			from_email = data.get("from", "")
+			subject = data.get("subject", "")
+			body = data.get("body-plain", "") or data.get("stripped-text", "")
+		else:
+			# Form data
+			from_email = request.POST.get("from", "").strip()
+			subject = request.POST.get("subject", "").strip()
+			body = request.POST.get("body-plain", "") or request.POST.get("stripped-text", "")
+		
+		if not from_email or not body:
+			return JsonResponse({"error": "Missing required fields"}, status=400)
+		
+		# Extract ticket ID from subject (e.g., "Re: Talep #123")
+		import re
+		ticket_id = None
+		match = re.search(r'#(\d+)', subject)
+		if match:
+			ticket_id = int(match.group(1))
+		
+		if not ticket_id:
+			# Try to find ticket ID in body
+			match = re.search(r'Talep\s+#(\d+)', body)
+			if match:
+				ticket_id = int(match.group(1))
+		
+		if not ticket_id:
+			return JsonResponse({"error": "Could not extract ticket ID"}, status=400)
+		
+		# Find ticket
+		try:
+			from .models import TicketEmailReply
+			ticket = Ticket.objects.get(id=ticket_id)
+		except Ticket.DoesNotExist:
+			return JsonResponse({"error": f"Ticket #{ticket_id} not found"}, status=404)
+		
+		# Find supplier by email
+		supplier = Supplier.objects.filter(email=from_email).first()
+		
+		# Create email reply record
+		TicketEmailReply.objects.create(
+			ticket=ticket,
+			supplier=supplier,
+			from_email=from_email,
+			subject=subject,
+			body=body,
+			raw_data=request.POST.dict() if request.method == "POST" else data,
+		)
+		
+		return JsonResponse({"status": "success", "ticket_id": ticket_id})
+		
+	except Exception as e:
+		import logging
+		logger = logging.getLogger(__name__)
+		logger.error(f"Email webhook error: {e}", exc_info=True)
+		return JsonResponse({"error": str(e)}, status=500)
+
+
+# Supplier no-auth access via token
+def supplier_access_token(request, token: str):
+	"""
+	No-auth supplier access to ticket via unique token.
+	Allows supplier to view ticket details and submit quote without logging in.
+	"""
+	ticket = get_object_or_404(Ticket, supplier_token=token)
+	
+	# Check if supplier email is provided in query param (for auto-fill)
+	supplier_email = request.GET.get('email', '').strip()
+	supplier = None
+	if supplier_email:
+		# Try to find supplier by email in ticket's assigned suppliers
+		supplier = ticket.assigned_suppliers.filter(email=supplier_email).first()
+	
+	# Prepare extra fields for display
+	extra_fields = []
+	if ticket.extra_data:
+		try:
+			specs = (
+				CategoryFormField.objects
+				.filter(organization=ticket.organization, category=ticket.category)
+				.order_by("order", "id")
+			)
+			for f in specs:
+				if f.name in ticket.extra_data:
+					val = ticket.extra_data.get(f.name)
+					if isinstance(val, list):
+						val = ", ".join([str(v) for v in val])
+					extra_fields.append({"label": f.label, "value": val})
+		except Exception:
+			for k, v in (ticket.extra_data or {}).items():
+				extra_fields.append({"label": k, "value": v})
+	
+	# Handle quote submission
+	if request.method == "POST":
+		# Get or create supplier from form data
+		sup_email = request.POST.get("supplier_email", "").strip()
+		sup_name = request.POST.get("supplier_name", "").strip()
+		
+		if not sup_email or not sup_name:
+			messages.error(request, "Lütfen e-posta ve firma adınızı giriniz.")
+			return redirect(request.path)
+		
+		# Find or create supplier
+		supplier = Supplier.objects.filter(email=sup_email).first()
+		if not supplier:
+			# Create new supplier
+			supplier = Supplier.objects.create(
+				name=sup_name,
+				email=sup_email,
+			)
+			supplier.organizations.add(ticket.organization)
+		else:
+			# Ensure supplier is in ticket's organization
+			if not supplier.organizations.filter(id=ticket.organization_id).exists():
+				supplier.organizations.add(ticket.organization)
+		
+		# Create or update quote
+		note = request.POST.get("note", "").strip()
+		amount_str = request.POST.get("amount", "0").strip()
+		currency = request.POST.get("currency", "TRY").strip()
+		
+		try:
+			amount = Decimal(amount_str)
+		except Exception:
+			amount = Decimal("0.00")
+		
+		# Check if quote already exists
+		existing_quote = Quote.objects.filter(ticket=ticket, supplier=supplier).first()
+		if existing_quote:
+			existing_quote.note = note
+			existing_quote.amount = amount
+			existing_quote.currency = currency
+			existing_quote.save()
+			messages.success(request, "Teklifiniz güncellendi.")
+		else:
+			Quote.objects.create(
+				ticket=ticket,
+				supplier=supplier,
+				note=note,
+				amount=amount,
+				currency=currency,
+			)
+			messages.success(request, "Teklifiniz alındı. Teşekkür ederiz!")
+		
+		return redirect(request.path + f"?email={sup_email}")
+	
+	# Check if supplier already submitted a quote
+	existing_quote = None
+	if supplier:
+		existing_quote = Quote.objects.filter(ticket=ticket, supplier=supplier).first()
+	
+	return render(
+		request,
+		"core/supplier_token_access.html",
+		{
+			"ticket": ticket,
+			"extra_fields": extra_fields,
+			"supplier": supplier,
+			"supplier_email": supplier_email,
+			"existing_quote": existing_quote,
+			"organization": ticket.organization,
+		},
+	)

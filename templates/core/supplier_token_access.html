@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load form_tags %}
+
+{% block title %}Talep #{{ ticket.id }} - {{ ticket.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0"><i class="bi bi-clipboard-check"></i> Talep Detayı</h4>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <h5>{{ ticket.title }}</h5>
+            </div>
+            <div class="col-md-6 text-md-end">
+              <span class="badge bg-info">Talep #{{ ticket.id }}</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <strong>Organizasyon:</strong> {{ organization.name }}
+          </div>
+
+          <div class="mb-3">
+            <strong>Kategori:</strong> {{ ticket.category.name }}
+          </div>
+
+          {% if ticket.desired_quantity %}
+          <div class="mb-3">
+            <strong>İstenilen Miktar:</strong> {{ ticket.desired_quantity }}
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <strong>Durum:</strong> <span class="badge bg-secondary">{{ ticket.get_status_display }}</span>
+          </div>
+
+          <div class="mb-3">
+            <strong>Oluşturulma Tarihi:</strong> {{ ticket.created_at|date:"d.m.Y H:i" }}
+          </div>
+
+          {% if ticket.description %}
+          <div class="mb-3">
+            <strong>Açıklama:</strong>
+            <div class="bg-light p-3 rounded mt-2">
+              {{ ticket.description|linebreaksbr }}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if extra_fields %}
+          <div class="mb-3">
+            <strong>Form Yanıtları:</strong>
+            <div class="bg-light p-3 rounded mt-2">
+              <ul class="mb-0">
+                {% for field in extra_fields %}
+                  <li><span class="text-muted">{{ field.label }}:</span> <strong>{{ field.value }}</strong></li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if ticket.attachments.all %}
+          <div class="mb-3">
+            <strong>Ekler:</strong>
+            <ul class="mt-2">
+              {% for att in ticket.attachments.all %}
+                <li>
+                  <a href="{{ att.file.url }}" target="_blank" class="text-decoration-none">
+                    <i class="bi bi-file-earmark"></i> {{ att.file.name|slice:"-60:" }}
+                  </a>
+                  <small class="text-muted">({{ att.uploaded_at|date:"d.m.Y H:i" }})</small>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if existing_quote %}
+      <div class="alert alert-success">
+        <h5><i class="bi bi-check-circle"></i> Teklifiniz Alındı</h5>
+        <p class="mb-1"><strong>Tutar:</strong> {{ existing_quote.amount }} {{ existing_quote.currency }}</p>
+        {% if existing_quote.note %}
+        <p class="mb-0"><strong>Not:</strong> {{ existing_quote.note }}</p>
+        {% endif %}
+        <hr>
+        <p class="mb-0 small">Teklifinizi güncellemek için aşağıdaki formu kullanabilirsiniz.</p>
+      </div>
+      {% endif %}
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="bi bi-currency-dollar"></i> Teklif Verin</h5>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+              <label for="supplier_email" class="form-label">E-posta Adresiniz <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" id="supplier_email" name="supplier_email" 
+                     value="{{ supplier_email }}" required>
+              <small class="text-muted">Teklifiniz bu e-posta adresine kayıt edilecektir.</small>
+            </div>
+
+            <div class="mb-3">
+              <label for="supplier_name" class="form-label">Firma Adınız <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="supplier_name" name="supplier_name" 
+                     value="{% if supplier %}{{ supplier.name }}{% endif %}" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="amount" class="form-label">Teklif Tutarı <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="number" step="0.01" min="0" class="form-control" id="amount" name="amount" 
+                       value="{% if existing_quote %}{{ existing_quote.amount }}{% endif %}" required>
+                <select class="form-select" name="currency" style="max-width: 120px;">
+                  <option value="TRY" {% if not existing_quote or existing_quote.currency == 'TRY' %}selected{% endif %}>TRY</option>
+                  <option value="USD" {% if existing_quote and existing_quote.currency == 'USD' %}selected{% endif %}>USD</option>
+                  <option value="EUR" {% if existing_quote and existing_quote.currency == 'EUR' %}selected{% endif %}>EUR</option>
+                  <option value="GBP" {% if existing_quote and existing_quote.currency == 'GBP' %}selected{% endif %}>GBP</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="note" class="form-label">Not / Açıklama (İsteğe Bağlı)</label>
+              <textarea class="form-control" id="note" name="note" rows="4" 
+                        placeholder="Teslimat süresi, özel notlar, vb...">{% if existing_quote %}{{ existing_quote.note }}{% endif %}</textarea>
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-success btn-lg">
+                <i class="bi bi-send"></i> {% if existing_quote %}Teklifi Güncelle{% else %}Teklif Gönder{% endif %}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="mt-4 text-center text-muted">
+        <small>
+          <i class="bi bi-shield-check"></i> Bu sayfa güvenli bir bağlantıdır ve size özeldir. 
+          Giriş yapmanıza gerek yoktur.
+        </small>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -62,4 +62,8 @@ urlpatterns = [
     path("portal/supplier/products/new/", views.supplier_products_new, name="supplier_products_new"),
     path("portal/supplier/products/<int:pk>/edit/", views.supplier_products_edit, name="supplier_products_edit"),
     path("portal/supplier/products/<int:pk>/delete/", views.supplier_products_delete, name="supplier_products_delete"),
+    # No-auth supplier access via token
+    path("supplier-access/<uuid:token>/", views.supplier_access_token, name="supplier_access_token"),
+    # Email webhook for incoming replies
+    path("webhook/email/", views.email_webhook, name="email_webhook"),
 ]

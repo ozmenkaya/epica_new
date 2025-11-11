@@ -83,6 +83,32 @@
         <a class="btn btn-sm btn-outline-secondary" href="{% url 'offers_list' %}">{% trans "Teklifli Taleplere Dön" %}</a>
       </div>
   </div>
+
+    {% if ticket.email_replies.all %}
+    <div class="card shadow-sm mt-3">
+      <div class="card-header bg-info text-white"><strong><i class="bi bi-envelope"></i> {% trans "Tedarikçi Email Yanıtları" %}</strong></div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-0">
+          {% for reply in ticket.email_replies.all %}
+            <li class="mb-3 pb-3 border-bottom">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <strong>{% if reply.supplier %}{{ reply.supplier.name }}{% else %}{{ reply.from_email }}{% endif %}</strong>
+                  <br>
+                  <small class="text-muted">{{ reply.received_at|date:"Y-m-d H:i" }}</small>
+                </div>
+              </div>
+              {% if reply.subject %}
+              <div class="mb-1"><strong>Konu:</strong> {{ reply.subject }}</div>
+              {% endif %}
+              <div class="bg-light p-2 rounded">{{ reply.body|linebreaksbr }}</div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
   </div> <!-- /left column -->
   <div class="col-lg-8 col-xl-8">
     <div class="card shadow-sm position-sticky" style="top:1rem;">

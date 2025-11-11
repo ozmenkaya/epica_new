@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from .models import Customer, Supplier, Category, Ticket, CategorySupplierRule
+from .models import Customer, Supplier, Category, Ticket, CategorySupplierRule, TicketEmailReply
 
 
 @admin.register(Customer)
@@ -60,3 +60,11 @@ class TicketAdmin(admin.ModelAdmin):
 	list_display = ("id", "title", "organization", "customer", "category", "status", "created_at")
 	list_filter = ("organization", "status", "category")
 	search_fields = ("title", "description")
+
+
+@admin.register(TicketEmailReply)
+class TicketEmailReplyAdmin(admin.ModelAdmin):
+	list_display = ("ticket", "from_email", "supplier", "subject", "received_at")
+	list_filter = ("supplier", "received_at")
+	search_fields = ("from_email", "subject", "body")
+	readonly_fields = ("ticket", "supplier", "from_email", "subject", "body", "received_at", "raw_data")
