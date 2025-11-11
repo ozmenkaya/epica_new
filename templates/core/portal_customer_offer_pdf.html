@@ -53,11 +53,11 @@
     {% endfor %}
       <tr>
         <td colspan="3" class="num">Ara toplam</td>
-        <td class="num">{{ items_subtotal|floatformat:2 }} {{ currency }}</td>
+        <td class="num">{{ items_subtotal|default:"0"|floatformat:2 }} {{ currency }}</td>
       </tr>
       <tr>
         <td colspan="3" class="num"><strong>Genel toplam</strong></td>
-        <td class="num"><strong>{{ grand_total|floatformat:2 }} {{ currency }}</strong></td>
+        <td class="num"><strong>{{ grand_total|default:"0"|floatformat:2 }} {{ currency }}</strong></td>
       </tr>
     </tbody>
   </table>
