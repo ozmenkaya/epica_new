@@ -1207,6 +1207,9 @@ def customer_offers_pdf(request, pk: int):
 	from xhtml2pdf import pisa
 	response = HttpResponse(content_type="application/pdf")
 	response["Content-Disposition"] = f'attachment; filename="teklif_{ticket.id}.pdf"'
+	response["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
+	response["Pragma"] = "no-cache"
+	response["Expires"] = "0"
 	pisa.CreatePDF(src=html, dest=response)
 	return response
 
