@@ -169,12 +169,19 @@ class SupplierForm(forms.ModelForm):
 	
 	class Meta:
 		model = Supplier
-		fields = ["name", "email", "phone", "notes", "login_username", "login_password1", "login_password2"]
+		fields = ["name", "email", "phone", "notes", "is_simplified", "login_username", "login_password1", "login_password2"]
 		widgets = {
 			"name": forms.TextInput(attrs={"class": "form-control"}),
 			"email": forms.EmailInput(attrs={"class": "form-control"}),
 			"phone": forms.TextInput(attrs={"class": "form-control"}),
 			"notes": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+			"is_simplified": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+		}
+		labels = {
+			"is_simplified": "Basit Usul Tedarikçi",
+		}
+		help_texts = {
+			"is_simplified": "Basit usul tedarikçiler için ürün seçimi olmadan sadece birim fiyat, adet ve açıklama girilir.",
 		}
 
 	def __init__(self, *args, **kwargs):
@@ -937,6 +944,13 @@ class QuoteItemForm(forms.Form):
 		if supplier is not None and category is not None:
 			qs = SupplierProduct.objects.filter(supplier=supplier, category=category, is_active=True).order_by("name")
 		self.fields["product"].queryset = qs
+
+
+class SimplifiedQuoteItemForm(forms.Form):
+	"""Simplified form for basit usul suppliers - no product selection"""
+	description = forms.CharField(max_length=255, required=True, label="Açıklama")
+	quantity = forms.IntegerField(min_value=1, initial=1, label="Adet")
+	unit_price = forms.DecimalField(min_value=0, decimal_places=2, max_digits=12, label="Birim Fiyat")
 
 
 class OwnerOfferForm(forms.Form):
@@ -1800,11 +1814,23 @@ def supplier_requests_detail(request, pk: int):
 	if not obj.assigned_suppliers.filter(id=sup.id).exists():
 		return redirect("supplier_requests_list")
 	existing = Quote.objects.filter(ticket=obj, supplier=sup).first()
-	# Use extra=0 and add rows dynamically on the client
-	ItemFormSet = formset_factory(QuoteItemForm, extra=0, can_delete=True)
+	
+	# Check if supplier is simplified (basit usul)
+	is_simplified = sup.is_simplified
+	
+	# Use different formset based on supplier type
+	if is_simplified:
+		ItemFormSet = formset_factory(SimplifiedQuoteItemForm, extra=0, can_delete=True)
+	else:
+		ItemFormSet = formset_factory(QuoteItemForm, extra=0, can_delete=True)
+	
 	if request.method == "POST":
 		note_form = QuoteNoteForm(request.POST, instance=existing)
-		formset = ItemFormSet(request.POST, form_kwargs={"supplier": sup, "category": obj.category})
+		if is_simplified:
+			formset = ItemFormSet(request.POST)
+		else:
+			formset = ItemFormSet(request.POST, form_kwargs={"supplier": sup, "category": obj.category})
+		
 		if note_form.is_valid() and formset.is_valid():
 			quote = note_form.save(commit=False)
 			quote.ticket = obj
@@ -1819,7 +1845,8 @@ def supplier_requests_detail(request, pk: int):
 					desc = f.cleaned_data.get("description")
 					qty = f.cleaned_data.get("quantity") or 1
 					unit = f.cleaned_data.get("unit_price") or Decimal("0.00")
-					prod = f.cleaned_data.get("product")
+					# For simplified suppliers, product is None
+					prod = None if is_simplified else f.cleaned_data.get("product")
 					if desc and qty and unit is not None:
 						item = QuoteItem.objects.create(
 							quote=quote,
@@ -1845,7 +1872,11 @@ def supplier_requests_detail(request, pk: int):
 					"quantity": it.quantity,
 					"unit_price": it.unit_price,
 				})
-		formset = ItemFormSet(initial=initial_items, form_kwargs={"supplier": sup, "category": obj.category})
+		if is_simplified:
+			formset = ItemFormSet(initial=initial_items)
+		else:
+			formset = ItemFormSet(initial=initial_items, form_kwargs={"supplier": sup, "category": obj.category})
+	
 	# Prepare labeled dynamic fields for display
 	extra_fields = []
 	if obj.extra_data:
@@ -1874,6 +1905,7 @@ def supplier_requests_detail(request, pk: int):
 			"org": org,
 			"existing": existing,
 			"extra_fields": extra_fields,
+			"is_simplified": is_simplified,
 		},
 	)
 

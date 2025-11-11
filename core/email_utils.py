@@ -5,10 +5,16 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils.html import strip_tags
-from weasyprint import HTML
 from io import BytesIO
 import tempfile
 import os
+
+# Import WeasyPrint only when needed (requires system dependencies)
+try:
+	from weasyprint import HTML
+	WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError):
+	WEASYPRINT_AVAILABLE = False
 
 
 def send_template_email(subject, template_name, context, recipient_list, from_email=None):
@@ -135,6 +141,9 @@ def generate_ticket_pdf(ticket):
     Returns:
         BytesIO object containing PDF data
     """
+    if not WEASYPRINT_AVAILABLE:
+        raise RuntimeError("WeasyPrint is not available. Please install system dependencies.")
+    
     from .models import CategoryFormField
     
     # Prepare extra fields with labels

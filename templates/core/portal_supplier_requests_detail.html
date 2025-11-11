@@ -56,15 +56,23 @@
           {% csrf_token %}
           <h6 class="mb-2">{% trans "Ürün/Hizmet Kalemleri" %}</h6>
           <div class="d-flex justify-content-between align-items-center mb-2">
+            {% if not is_simplified %}
             <div class="small text-muted">{% trans "Ürününüz listede yok mu?" %} <a href="{% url 'supplier_products_new' %}" target="_blank">{% trans "Yeni Ürün oluştur" %}</a></div>
+            {% else %}
+            <div class="small text-muted">{% trans "Basit usul tedarikçi - Sadece birim fiyat, adet ve açıklama giriniz" %}</div>
+            {% endif %}
             <button id="add-item" class="btn btn-sm btn-outline-primary" type="button">{% trans "Kalem Ekle" %}</button>
           </div>
           <div class="border rounded p-2 mb-3" id="items-container">
             {{ items_formset.management_form }}
             {% for f in items_formset %}
               <div class="row g-2 align-items-end mb-2 item-row">
+                {% if not is_simplified %}
                 <div class="col-12 col-md-3">{% bootstrap_field f.product %}</div>
                 <div class="col-12 col-md-4">{% bootstrap_field f.description %}</div>
+                {% else %}
+                <div class="col-12 col-md-5">{% bootstrap_field f.description %}</div>
+                {% endif %}
                 <div class="col-6 col-md-2">{% bootstrap_field f.quantity %}</div>
                 <div class="col-6 col-md-2">{% bootstrap_field f.unit_price %}</div>
                 <div class="col-12 col-md-1">{% if f.DELETE %}{% bootstrap_field f.DELETE %}{% endif %}</div>
@@ -72,8 +80,12 @@
             {% endfor %}
             <template id="empty-form-template">
               <div class="row g-2 align-items-end mb-2 item-row">
+                {% if not is_simplified %}
                 <div class="col-12 col-md-3">{% bootstrap_field items_formset.empty_form.product %}</div>
                 <div class="col-12 col-md-4">{% bootstrap_field items_formset.empty_form.description %}</div>
+                {% else %}
+                <div class="col-12 col-md-5">{% bootstrap_field items_formset.empty_form.description %}</div>
+                {% endif %}
                 <div class="col-6 col-md-2">{% bootstrap_field items_formset.empty_form.quantity %}</div>
                 <div class="col-6 col-md-2">{% bootstrap_field items_formset.empty_form.unit_price %}</div>
                 <div class="col-12 col-md-1">{% if items_formset.empty_form.DELETE %}{% bootstrap_field items_formset.empty_form.DELETE %}{% endif %}</div>

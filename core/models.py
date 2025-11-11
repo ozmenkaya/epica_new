@@ -44,6 +44,7 @@ class Supplier(models.Model):
 	email = models.EmailField(blank=True, null=True, unique=True)
 	phone = models.CharField(max_length=50, blank=True)
 	notes = models.TextField(blank=True)
+	is_simplified = models.BooleanField(default=False, verbose_name="Basit Usul")
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:
