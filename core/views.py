@@ -1170,6 +1170,15 @@ def customer_offers_pdf(request, pk: int):
 
 	grand_total = ticket.offered_price or (items_subtotal + (selected_global_markup or Decimal("0.00")))
 
+	# Debug logging
+	import logging
+	logger = logging.getLogger(__name__)
+	logger.error(f"PDF Debug - items_subtotal: {items_subtotal}, type: {type(items_subtotal)}")
+	logger.error(f"PDF Debug - grand_total: {grand_total}, type: {type(grand_total)}")
+	logger.error(f"PDF Debug - float(items_subtotal): {float(items_subtotal) if items_subtotal else 0}")
+	logger.error(f"PDF Debug - float(grand_total): {float(grand_total) if grand_total else 0}")
+	logger.error(f"PDF Debug - selected_items count: {len(selected_items)}")
+
 	html = render_to_string(
 		"core/portal_customer_offer_pdf.html",
 		{
