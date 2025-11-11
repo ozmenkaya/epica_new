@@ -1198,6 +1198,10 @@ def customer_offers_pdf(request, pk: int):
 	print(f"===== HTML OUTPUT =====")
 	print(html[:2000])  # First 2000 chars
 	print(f"===== HTML END ======")
+	
+	# DEBUG: Return HTML instead of PDF to see what's being rendered
+	if request.GET.get('debug') == '1':
+		return HttpResponse(html)
 
 	# Lazy import of xhtml2pdf
 	from xhtml2pdf import pisa
