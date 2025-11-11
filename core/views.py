@@ -1145,8 +1145,8 @@ def customer_offers_pdf(request, pk: int):
 				selected_items.append({
 					"description": it.description,
 					"quantity": it.quantity,
-					"sell_unit_price": sell_unit_price,
-					"sell_total": sell_total,
+					"sell_unit_price": float(sell_unit_price),
+					"sell_total": float(sell_total),
 				})
 				items_subtotal += sell_total
 
@@ -1175,8 +1175,8 @@ def customer_offers_pdf(request, pk: int):
 		{
 			"ticket": ticket,
 			"items": selected_items,
-			"items_subtotal": items_subtotal,
-			"grand_total": grand_total,
+			"items_subtotal": float(items_subtotal) if items_subtotal else 0,
+			"grand_total": float(grand_total) if grand_total else 0,
 			"currency": currency,
 			"org": cust.organization,
 			"extra_fields": extra_fields,
