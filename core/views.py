@@ -1107,11 +1107,14 @@ def customer_offers_detail(request, pk: int):
 
 @login_required
 def customer_offers_pdf(request, pk: int):
+	# DEBUG: Return HTML instead of PDF to see what's being rendered
+	debug_mode = request.GET.get('debug') == '1' or request.GET.get('html') == '1'
+	
 	# CRITICAL DEBUG - Check if this view is even being called
 	import sys
 	sys.stderr.write(f"\n\n{'='*60}\n")
 	sys.stderr.write(f"CUSTOMER_OFFERS_PDF VIEW CALLED!\n")
-	sys.stderr.write(f"pk={pk}, debug={request.GET.get('debug')}\n")
+	sys.stderr.write(f"pk={pk}, debug={debug_mode}\n")
 	sys.stderr.write(f"user={request.user}\n")
 	sys.stderr.write(f"{'='*60}\n\n")
 	sys.stderr.flush()
@@ -1209,8 +1212,8 @@ def customer_offers_pdf(request, pk: int):
 	print(f"===== HTML END ======")
 	
 	# DEBUG: Return HTML instead of PDF to see what's being rendered
-	if request.GET.get('debug') == '1':
-		return HttpResponse(html)
+	if debug_mode:
+		return HttpResponse(html, content_type='text/html')
 
 	# Lazy import of xhtml2pdf
 	from xhtml2pdf import pisa
