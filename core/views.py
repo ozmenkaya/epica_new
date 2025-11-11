@@ -1110,6 +1110,10 @@ def customer_offers_pdf(request, pk: int):
 	# DEBUG: Return HTML instead of PDF to see what's being rendered
 	debug_mode = request.GET.get('debug') == '1' or request.GET.get('html') == '1'
 	
+	# EARLY DEBUG TEST
+	if debug_mode:
+		return HttpResponse(f"<h1>DEBUG MODE ACTIVE</h1><p>pk={pk}</p><p>GET params: {dict(request.GET)}</p>", content_type='text/html')
+	
 	# CRITICAL DEBUG - Check if this view is even being called
 	import sys
 	sys.stderr.write(f"\n\n{'='*60}\n")
