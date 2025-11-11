@@ -1469,7 +1469,7 @@ class CategorySupplierRuleForm(forms.ModelForm):
 		all_fields = []
 		if self._category is not None:
 			all_fields = list(self._category.form_fields.order_by("order", "id").all())
-		name_choices = [("", "- Alan seçin -")] + [(f.name, f"{f.label} ({f.name})") for f in all_fields]
+		name_choices = [("", "- Alan seçin -"), ("form-0-quantity", "Miktar (form-0-quantity)")] + [(f.name, f"{f.label} ({f.name})") for f in all_fields]
 		# Replace field_name with ChoiceField
 		self.fields["field_name"] = forms.ChoiceField(
 			choices=name_choices, required=False, label=self.fields["field_name"].label,
