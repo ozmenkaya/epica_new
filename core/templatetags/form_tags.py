@@ -86,3 +86,17 @@ def bootstrap_field(field: Any) -> Dict[str, Any]:
         }
     except Exception:
         return {"field": field, "is_checkbox": False}
+
+
+@register.filter
+def remove_trailing_zeros(value: Any) -> str:
+    """Remove trailing zeros from decimal numbers."""
+    try:
+        from decimal import Decimal
+        num = Decimal(str(value))
+        # Normalize removes trailing zeros
+        normalized = num.normalize()
+        # Convert to string, preserving the simplified form
+        return str(normalized)
+    except Exception:
+        return str(value)

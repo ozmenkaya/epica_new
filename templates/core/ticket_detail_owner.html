@@ -48,7 +48,7 @@
                   <small class="text-muted">{% trans "Kalemler" %}:</small>
                   <ul>
                     {% for it in q.items.all %}
-                      <li>{{ it.description }} — {{ it.quantity }} x {{ it.unit_price }} = {{ it.line_total }} {{ q.currency }}</li>
+                      <li>{{ it.description }} — {{ it.quantity }} x {{ it.unit_price|remove_trailing_zeros }} = {{ it.line_total|remove_trailing_zeros }} {{ q.currency }}</li>
                     {% endfor %}
                   </ul>
                 </div>
