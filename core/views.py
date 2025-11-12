@@ -813,7 +813,7 @@ def supplier_order_detail(request, pk: int):
 		_set_tenant_session(request, org)
 	_set_tenant_session(request, org)
 	order = get_object_or_404(
-		Order.objects.select_related("ticket").prefetch_related("items"),
+		Order.objects.select_related("ticket", "ticket__category").prefetch_related("items__product__category"),
 		pk=pk,
 		organization=org,
 		supplier=sup,

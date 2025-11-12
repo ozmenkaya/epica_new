@@ -21,21 +21,40 @@
           <thead>
             <tr>
               <th>Ürün/Açıklama</th>
+              <th>Kategori</th>
               <th class="text-end">Adet</th>
-              <th class="text-end">Birim Fiyat (Tedarikçi)</th>
-              <th class="text-end">Tedarikçi Tutar</th>
+              <th class="text-end">Birim Fiyat</th>
+              <th class="text-end">Toplam</th>
             </tr>
           </thead>
           <tbody>
             {% for it in order.items.all %}
               <tr>
-                <td>{{ it.description }}</td>
+                <td>
+                  {% if it.product %}
+                    <strong>{{ it.product.name }}</strong>
+                    {% if it.description and it.description != it.product.name %}
+                      <div class="small text-muted">{{ it.description }}</div>
+                    {% endif %}
+                  {% else %}
+                    {{ it.description }}
+                  {% endif %}
+                </td>
+                <td>
+                  {% if it.product and it.product.category %}
+                    <span class="badge bg-secondary">{{ it.product.category.name }}</span>
+                  {% elif order.ticket.category %}
+                    <span class="badge bg-secondary">{{ order.ticket.category.name }}</span>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
                 <td class="text-end">{{ it.quantity }}</td>
                 <td class="text-end">{{ it.supplier_unit_price }}</td>
-                <td class="text-end">{{ it.quantity|default_if_none:0|floatformat:0|add:"" }}{% comment %}placeholder{% endcomment %}</td>
+                <td class="text-end">{% widthratio it.supplier_unit_price 1 it.quantity %}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="4" class="text-muted">Kalem yok.</td></tr>
+              <tr><td colspan="5" class="text-muted">Kalem yok.</td></tr>
             {% endfor %}
           </tbody>
         </table>
