@@ -2581,7 +2581,7 @@ def supplier_access_token(request, token: str):
 					quote=existing_quote,
 					description=ticket.description or ticket.title,
 					quantity=qty,
-					unit_price=(amount / Decimal(qty)).quantize(Decimal("0.01")),
+					unit_price=(amount / Decimal(qty)).quantize(Decimal("0.000001")),
 				)
 			
 			messages.success(request, "Teklifiniz güncellendi.")
@@ -2601,7 +2601,7 @@ def supplier_access_token(request, token: str):
 					quote=new_quote,
 					description=ticket.description or ticket.title,
 					quantity=qty,
-					unit_price=(amount / Decimal(qty)).quantize(Decimal("0.01")),
+					unit_price=(amount / Decimal(qty)).quantize(Decimal("0.000001")),
 				)
 			
 			messages.success(request, "Teklifiniz alındı. Teşekkür ederiz!")
