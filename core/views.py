@@ -1283,9 +1283,10 @@ def customer_requests_new(request):
 				messages.error(request, "Lütfen zorunlu alanları doldurun.")
 			else:
 				created = 0
+				created_tickets = []
 				for cat, desc, qty, extra, _ in rows_buffer:
 					if cat and desc:
-						Ticket.objects.create(
+						ticket = Ticket.objects.create(
 							organization=cust.organization,
 							customer=cust,
 							category=cat,
@@ -1294,11 +1295,30 @@ def customer_requests_new(request):
 							desired_quantity=qty,
 							extra_data=extra,
 						)
+						created_tickets.append(ticket)
 						created += 1
+				
 				if created == 0:
 					messages.error(request, "En az bir satır ekleyin.")
 				else:
-					messages.success(request, f"{created} talep oluşturuldu.")
+					# Send email notifications to suppliers
+					from .email_utils import send_ticket_to_suppliers
+					total_emails_sent = 0
+					for ticket in created_tickets:
+						# Get suppliers for this ticket's category
+						suppliers = list(ticket.category.suppliers.filter(email__isnull=False).exclude(email=''))
+						if suppliers:
+							try:
+								emails_sent = send_ticket_to_suppliers(ticket, suppliers)
+								total_emails_sent += emails_sent
+							except Exception as e:
+								# Log error but don't fail the request
+								print(f"Error sending emails for ticket {ticket.id}: {e}")
+					
+					if total_emails_sent > 0:
+						messages.success(request, f"{created} talep oluşturuldu ve {total_emails_sent} tedarikçiye mail gönderildi.")
+					else:
+						messages.success(request, f"{created} talep oluşturuldu.")
 					return redirect("customer_requests_list")
 	else:
 		header_form = TicketHeaderForm()
