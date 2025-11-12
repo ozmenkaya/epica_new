@@ -2573,15 +2573,36 @@ def supplier_access_token(request, token: str):
 			existing_quote.amount = amount
 			existing_quote.currency = currency
 			existing_quote.save()
+			
+			# Ensure at least one quote item exists for owner markup calculation
+			if not existing_quote.items.exists():
+				QuoteItem.objects.create(
+					quote=existing_quote,
+					description=ticket.description or ticket.title,
+					quantity=ticket.desired_quantity or 1,
+					unit_price=amount / Decimal(ticket.desired_quantity or 1),
+					line_total=amount,
+				)
+			
 			messages.success(request, "Teklifiniz güncellendi.")
 		else:
-			Quote.objects.create(
+			new_quote = Quote.objects.create(
 				ticket=ticket,
 				supplier=supplier,
 				note=note,
 				amount=amount,
 				currency=currency,
 			)
+			
+			# Create a default quote item for owner markup calculation
+			QuoteItem.objects.create(
+				quote=new_quote,
+				description=ticket.description or ticket.title,
+				quantity=ticket.desired_quantity or 1,
+				unit_price=amount / Decimal(ticket.desired_quantity or 1),
+				line_total=amount,
+			)
+			
 			messages.success(request, "Teklifiniz alındı. Teşekkür ederiz!")
 		
 		return redirect(request.path + f"?email={sup_email}")
