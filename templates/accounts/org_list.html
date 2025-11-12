@@ -25,6 +25,7 @@
               <td class="fw-medium">{{ org.name }}</td>
               <td><code>{{ org.slug }}</code></td>
               <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary me-1" href="{% url 'org_settings' org.id %}"><i class="bi bi-gear"></i> {% trans "Ayarlar" %}</a>
                 <a class="btn btn-sm btn-outline-primary" href="/accounts/orgs/switch/{{ org.slug }}/">{% trans "Geç" %}</a>
               </td>
             </tr>
