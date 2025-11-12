@@ -94,9 +94,9 @@ def remove_trailing_zeros(value: Any) -> str:
     try:
         from decimal import Decimal
         num = Decimal(str(value))
-        # Normalize removes trailing zeros
-        normalized = num.normalize()
-        # Convert to string, preserving the simplified form
-        return str(normalized)
+        # Use string formatting to avoid scientific notation
+        # Format with enough precision, then strip trailing zeros
+        formatted = f"{num:.10f}".rstrip('0').rstrip('.')
+        return formatted
     except Exception:
         return str(value)
