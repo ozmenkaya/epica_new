@@ -85,12 +85,12 @@
 				<table class="table table-sm table-hover">
 					<thead class="table-light">
 						<tr>
-							<th>{% trans "Ticket #" %}</th>
-							<th>{% trans "Müşteri" %}</th>
-							<th>{% trans "Başlık" %}</th>
-							<th>{% trans "Tutar" %}</th>
-							<th>{% trans "Kabul Tarihi" %}</th>
-							<th>{% trans "Durum" %}</th>
+						<th>{% trans "Ticket #" %}</th>
+						<th>{% trans "Müşteri" %}</th>
+						<th>{% trans "Başlık" %}</th>
+						<th>{% trans "Tutar" %}</th>
+						<th>{% trans "Teklif Tarihi" %}</th>
+						<th>{% trans "Durum" %}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -107,7 +107,7 @@
 								<strong>{{ quote.amount }} {{ quote.currency }}</strong>
 							</td>
 							<td>
-								<small class="text-muted">{{ quote.accepted_at|date:"Y-m-d H:i" }}</small>
+								<small class="text-muted">{{ quote.created_at|date:"Y-m-d H:i" }}</small>
 							</td>
 							<td>
 								{% if quote.ticket.status == 'completed' %}
@@ -175,23 +175,23 @@
 									<span class="badge bg-secondary">{{ td.ticket.get_status_display }}</span>
 								{% endif %}
 							</td>
-							<td>
-								{% if td.has_quote %}
-									{% if td.quote.accepted_at %}
-										<span class="badge bg-success">
-											<i class="bi bi-check-circle"></i> {% trans "Kabul Edildi" %}
-										</span>
-									{% else %}
-										<span class="badge bg-info">
-											<i class="bi bi-file-text"></i> {% trans "Teklif Verildi" %}
-										</span>
-									{% endif %}
+						<td>
+							{% if td.has_quote %}
+								{% if td.ticket.selected_quote_id == td.quote.id %}
+									<span class="badge bg-success">
+										<i class="bi bi-check-circle"></i> {% trans "Kabul Edildi" %}
+									</span>
 								{% else %}
-									<span class="badge bg-warning">
-										<i class="bi bi-clock"></i> {% trans "Teklif Bekleniyor" %}
+									<span class="badge bg-info">
+										<i class="bi bi-file-text"></i> {% trans "Teklif Verildi" %}
 									</span>
 								{% endif %}
-							</td>
+							{% else %}
+								<span class="badge bg-warning">
+									<i class="bi bi-clock"></i> {% trans "Teklif Bekleniyor" %}
+								</span>
+							{% endif %}
+						</td>
 							<td>
 								{% if td.quote %}
 									<strong>{{ td.quote.amount }} {{ td.quote.currency }}</strong>

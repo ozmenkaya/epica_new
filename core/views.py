@@ -641,12 +641,13 @@ def supplier_detail(request, pk: int):
 	tickets_without_quotes = total_tickets - tickets_with_quotes
 	
 	# Tedarikçinin kabul edilen teklifleri (siparişe dönüşenler)
+	# Ticket'ın selected_quote field'ı bu tedarikçiye aitse kabul edilmiş demektir
 	accepted_quotes = (
 		Quote.objects
-		.filter(supplier=supplier, ticket__organization=org)
-		.exclude(accepted_at__isnull=True)
+		.filter(supplier=supplier, ticket__organization=org, ticket__selected_quote__isnull=False)
+		.filter(ticket__selected_quote=models.F('id'))
 		.select_related('ticket__customer')
-		.order_by('-accepted_at')
+		.order_by('-created_at')
 	)
 	
 	context = {
