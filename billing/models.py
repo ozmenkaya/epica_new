@@ -26,7 +26,12 @@ class Order(models.Model):
 
 	class Meta:
 		ordering = ["-created_at"]
-		indexes = [models.Index(fields=["organization", "status"])]
+		indexes = [
+			models.Index(fields=["organization", "status"]),
+			models.Index(fields=['organization', 'status', '-created_at'], name='order_org_status_created_idx'),
+			models.Index(fields=['supplier', 'status'], name='order_supplier_status_idx'),
+			models.Index(fields=['status', '-created_at'], name='order_status_created_idx'),
+		]
 
 	def __str__(self) -> str:
 		return f"Order #{self.pk} / Ticket #{self.ticket_id}"

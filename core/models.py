@@ -327,6 +327,12 @@ class Ticket(models.Model):
 
 	class Meta:
 		ordering = ["-created_at"]
+		indexes = [
+			models.Index(fields=['organization', 'status', '-created_at'], name='ticket_org_status_idx'),
+			models.Index(fields=['customer', 'status'], name='ticket_customer_status_idx'),
+			models.Index(fields=['category', 'status'], name='ticket_category_status_idx'),
+			models.Index(fields=['status', '-created_at'], name='ticket_status_created_idx'),
+		]
 
 	def clean(self):
 		# Ensure all orgs match without dereferencing unset relations
@@ -434,6 +440,8 @@ class Quote(models.Model):
 		ordering = ["-created_at"]
 		indexes = [
 			models.Index(fields=["ticket", "supplier"]),
+			models.Index(fields=['supplier', '-created_at'], name='quote_supplier_created_idx'),
+			models.Index(fields=['ticket', '-created_at'], name='quote_ticket_created_idx'),
 		]
 		unique_together = (("ticket", "supplier"),)
 

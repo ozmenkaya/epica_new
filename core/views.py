@@ -9,6 +9,10 @@ from django import forms
 from django.forms import formset_factory
 from decimal import Decimal, ROUND_HALF_UP
 from django.contrib import messages
+from django_ratelimit.decorators import ratelimit
+import logging
+
+logger = logging.getLogger(__name__)
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from billing.models import Order, OrderItem
@@ -923,6 +927,40 @@ class TicketAttachmentForm(forms.ModelForm):
 	class Meta:
 		model = TicketAttachment
 		fields = ["file"]
+	
+	def clean_file(self):
+		file = self.cleaned_data.get('file')
+		if file:
+			# Dosya boyutu kontrolü (50MB limit)
+			max_size = 50 * 1024 * 1024  # 50MB
+			if file.size > max_size:
+				raise forms.ValidationError(f"Dosya boyutu {max_size / (1024*1024):.0f}MB'dan büyük olamaz.")
+			
+			# Dosya tipi kontrolü
+			allowed_extensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip']
+			file_ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+			
+			if file_ext not in allowed_extensions:
+				raise forms.ValidationError(
+					f"İzin verilen dosya formatları: {', '.join(allowed_extensions)}"
+				)
+			
+			# MIME type kontrolü (ek güvenlik)
+			import mimetypes
+			mime_type, _ = mimetypes.guess_type(file.name)
+			safe_mime_types = [
+				'application/pdf',
+				'image/jpeg', 'image/png', 'image/gif',
+				'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+				'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+				'text/plain',
+				'application/zip'
+			]
+			
+			if mime_type and mime_type not in safe_mime_types:
+				raise forms.ValidationError("Bu dosya tipi güvenlik nedeniyle kabul edilmiyor.")
+		
+		return file
 
 class QuoteNoteForm(forms.ModelForm):
 	class Meta:
@@ -1231,6 +1269,7 @@ def customer_offers_pdf(request, pk: int):
 
 
 @login_required
+@ratelimit(key='user', rate='100/h', method='POST')
 def customer_requests_new(request):
 	cust = getattr(request.user, "customer_profile", None)
 	if not cust:
@@ -2494,12 +2533,15 @@ def email_webhook(request):
 
 
 # Supplier no-auth access via token
+@ratelimit(key='ip', rate='10/m', method='POST')
 def supplier_access_token(request, token: str):
 	"""
 	No-auth supplier access to ticket via unique token.
 	Allows supplier to view ticket details and submit quote without logging in.
+	Rate limited to prevent abuse: 10 POST requests per minute per IP.
 	"""
 	ticket = get_object_or_404(Ticket, supplier_token=token)
+	logger.info(f"Supplier accessed ticket #{ticket.id} via token from IP: {request.META.get('REMOTE_ADDR')}")
 	
 	# Check if supplier email is provided in query param (for auto-fill)
 	supplier_email = request.GET.get('email', '').strip()
@@ -2599,6 +2641,7 @@ def supplier_access_token(request, token: str):
 					unit_price=unit_price,
 				)
 			
+			logger.info(f"Quote updated by {supplier.name} for ticket #{ticket.id}: {total_amount} {currency}")
 			messages.success(request, "Teklifiniz güncellendi.")
 		else:
 			new_quote = Quote.objects.create(
@@ -2609,19 +2652,18 @@ def supplier_access_token(request, token: str):
 				currency=currency,
 			)
 			
-			# Create quote item with unit price
-			QuoteItem.objects.create(
-				quote=new_quote,
-				description=ticket.description or ticket.title,
-				quantity=qty,
-				unit_price=unit_price,
-			)
-			
-			messages.success(request, "Teklifiniz alındı. Teşekkür ederiz!")
+		# Create quote item with unit price
+		QuoteItem.objects.create(
+			quote=new_quote,
+			description=ticket.description or ticket.title,
+			quantity=qty,
+			unit_price=unit_price,
+		)
 		
-		return redirect(request.path + f"?email={sup_email}")
+	logger.info(f"New quote submitted by {supplier.name} for ticket #{ticket.id}: {total_amount} {currency}")
+	messages.success(request, "Teklifiniz alındı. Teşekkür ederiz!")
 	
-	# Check if supplier already submitted a quote
+	return redirect(request.path + f"?email={sup_email}")	# Check if supplier already submitted a quote
 	existing_quote = None
 	existing_unit_price = None
 	if supplier:
