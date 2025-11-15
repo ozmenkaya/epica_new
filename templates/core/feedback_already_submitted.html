@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5">
+	<div class="row justify-content-center">
+		<div class="col-md-6">
+			<div class="card shadow text-center">
+				<div class="card-body p-5">
+					<div class="mb-4">
+						<i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+					</div>
+					<h3 class="mb-3">{% trans "Teşekkürler!" %}</h3>
+					<p class="lead text-muted">
+						{% trans "Bu sipariş için değerlendirmeniz daha önce alınmıştır." %}
+					</p>
+					
+					<div class="alert alert-info mt-4">
+						<strong>{% trans "Değerlendirmeniz:" %}</strong><br>
+						<div class="mt-3">
+							<div class="row">
+								<div class="col-6 text-end">{% trans "Ürün Kalitesi:" %}</div>
+								<div class="col-6 text-start">
+									{% for i in "12345"|make_list %}
+										{% if forloop.counter <= feedback.product_quality %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-6 text-end">{% trans "İletişim:" %}</div>
+								<div class="col-6 text-start">
+									{% for i in "12345"|make_list %}
+										{% if forloop.counter <= feedback.communication %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-6 text-end">{% trans "Teslimat:" %}</div>
+								<div class="col-6 text-start">
+									{% for i in "12345"|make_list %}
+										{% if forloop.counter <= feedback.delivery_time %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-6 text-end">{% trans "Genel:" %}</div>
+								<div class="col-6 text-start">
+									{% for i in "12345"|make_list %}
+										{% if forloop.counter <= feedback.overall_satisfaction %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+						{% if feedback.comment %}
+						<div class="mt-3 text-start">
+							<strong>{% trans "Yorumunuz:" %}</strong><br>
+							<em>{{ feedback.comment }}</em>
+						</div>
+						{% endif %}
+					</div>
+
+					<p class="text-muted small mt-4">
+						{% trans "Değerlendirme tarihi:" %} {{ feedback.created_at|date:"d.m.Y H:i" }}
+					</p>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}

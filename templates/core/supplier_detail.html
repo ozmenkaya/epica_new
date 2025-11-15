@@ -11,6 +11,9 @@
 			</h4>
 			<div>
 				{% if tenant_is_owner or tenant_is_admin %}
+					<button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#reviewModal">
+						<i class="bi bi-star"></i> {% trans "Değerlendirme Ekle" %}
+					</button>
 					<a class="btn btn-sm btn-outline-primary" href="{% url 'suppliers_edit' supplier.id %}">
 						<i class="bi bi-pencil"></i> {% trans "Düzenle" %}
 					</a>
@@ -43,6 +46,85 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Performans Skoru -->
+	{% if has_metrics %}
+	<div class="card shadow-sm mb-4 border-{{ badge_class }}">
+		<div class="card-header bg-{{ badge_class }} text-white d-flex justify-content-between align-items-center">
+			<h5 class="mb-0">
+				<i class="bi bi-trophy-fill"></i> {% trans "Performans Skoru" %}
+			</h5>
+			<span class="badge bg-white text-{{ badge_class }} fs-6">{{ badge_text }}</span>
+		</div>
+		<div class="card-body">
+			<div class="row align-items-center mb-4">
+				<div class="col-md-4 text-center">
+					<div class="display-3 fw-bold text-{{ badge_class }}">
+						{{ metrics.overall_score|floatformat:1 }}
+					</div>
+					<div class="text-muted">/ 100</div>
+					<div class="mt-3">
+						<div class="progress" style="height: 10px;">
+							<div class="progress-bar bg-{{ badge_class }}" role="progressbar" 
+								 style="width: {{ metrics.overall_score }}%;" 
+								 aria-valuenow="{{ metrics.overall_score }}" aria-valuemin="0" aria-valuemax="100">
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-8">
+					<div class="row g-3">
+						<div class="col-6">
+							<div class="d-flex justify-content-between align-items-center mb-2">
+								<span class="text-muted small">{% trans "Kazanma Oranı" %}</span>
+								<strong>%{{ metrics.win_rate_percent|floatformat:1 }}</strong>
+							</div>
+							<div class="progress" style="height: 6px;">
+								<div class="progress-bar" style="width: {{ metrics.win_rate_percent }}%;"></div>
+							</div>
+						</div>
+						<div class="col-6">
+							<div class="d-flex justify-content-between align-items-center mb-2">
+								<span class="text-muted small">{% trans "Zamanında Teslimat" %}</span>
+								<strong>%{{ metrics.on_time_delivery_percent|floatformat:1 }}</strong>
+							</div>
+							<div class="progress" style="height: 6px;">
+								<div class="progress-bar bg-success" style="width: {{ metrics.on_time_delivery_percent }}%;"></div>
+							</div>
+						</div>
+						<div class="col-6">
+							<div class="d-flex justify-content-between align-items-center mb-2">
+								<span class="text-muted small">{% trans "Ürün Kalitesi" %}</span>
+								<strong>{{ metrics.avg_product_quality|floatformat:1 }} / 5</strong>
+							</div>
+							<div class="progress" style="height: 6px;">
+								<div class="progress-bar bg-warning" style="width: {{ metrics.avg_product_quality|floatformat:0|add:'0'|divisibleby:'5'|yesno:'100,80,60,40,20' }}%;"></div>
+							</div>
+						</div>
+						<div class="col-6">
+							<div class="d-flex justify-content-between align-items-center mb-2">
+								<span class="text-muted small">{% trans "Müşteri Memnuniyeti" %}</span>
+								<strong>{{ metrics.avg_overall_satisfaction|floatformat:1 }} / 5</strong>
+							</div>
+							<div class="progress" style="height: 6px;">
+								<div class="progress-bar bg-info" style="width: {% widthratio metrics.avg_overall_satisfaction 5 100 %}%;"></div>
+							</div>
+						</div>
+					</div>
+					<div class="mt-3">
+						<small class="text-muted">
+							<i class="bi bi-info-circle"></i> 
+							{% trans "Ortalama Teklif Süresi:" %} 
+							<strong>{{ metrics.avg_quote_response_hours|floatformat:1 }} {% trans "saat" %}</strong>
+							&nbsp;|&nbsp;
+							{% trans "Toplam Sipariş:" %} <strong>{{ metrics.total_orders }}</strong>
+						</small>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% endif %}
 
 	<!-- İstatistikler -->
 	<div class="row mb-4">
@@ -216,4 +298,73 @@
 		</div>
 	</div>
 </div>
+
+<!-- Owner Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form method="post" action="{% url 'add_owner_review' %}">
+				{% csrf_token %}
+				<input type="hidden" name="supplier_id" value="{{ supplier.id }}">
+				<input type="hidden" name="redirect_to" value="{{ request.path }}">
+				
+				<div class="modal-header bg-warning text-white">
+					<h5 class="modal-title" id="reviewModalLabel">
+						<i class="bi bi-star-fill"></i> {% trans "Tedarikçiyi Değerlendir" %}
+					</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label fw-bold">{% trans "Değerlendirme Kategorisi" %}</label>
+						<select name="category" class="form-select" required>
+							<option value="">{% trans "Seçiniz..." %}</option>
+							<option value="reliability">{% trans "Güvenilirlik" %}</option>
+							<option value="communication">{% trans "İletişim" %}</option>
+							<option value="quality">{% trans "Kalite" %}</option>
+							<option value="speed">{% trans "Hız" %}</option>
+							<option value="pricing">{% trans "Fiyatlandırma" %}</option>
+						</select>
+					</div>
+					
+					<div class="mb-3">
+						<label class="form-label fw-bold">{% trans "Puan (1-5 Yıldız)" %}</label>
+						<div class="d-flex gap-3 justify-content-center py-2">
+							{% for i in "12345" %}
+							<div class="form-check form-check-inline">
+								<input class="form-check-input" type="radio" name="rating" id="rating{{ i }}" value="{{ i }}" required>
+								<label class="form-check-label star-label" for="rating{{ i }}" style="font-size: 2rem; cursor: pointer;">
+									⭐
+								</label>
+							</div>
+							{% endfor %}
+						</div>
+					</div>
+					
+					<div class="mb-3">
+						<label class="form-label fw-bold">{% trans "Notlar (Opsiyonel)" %}</label>
+						<textarea name="notes" class="form-control" rows="3" placeholder="{% trans 'Bu tedarikçi hakkında notlarınız...' %}"></textarea>
+					</div>
+				</div>
+				
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+						{% trans "İptal" %}
+					</button>
+					<button type="submit" class="btn btn-warning">
+						<i class="bi bi-save"></i> {% trans "Kaydet" %}
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<style>
+.star-label:hover {
+	transform: scale(1.2);
+	transition: transform 0.2s;
+}
+</style>
 {% endblock %}

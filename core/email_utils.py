@@ -276,3 +276,103 @@ def send_ticket_to_suppliers(ticket, supplier_list):
             continue
     
     return sent_count
+
+
+def send_order_completed_survey_email(order):
+    """
+    Send customer feedback survey email when order is completed.
+    Uses organization's email settings if configured, otherwise uses default settings.
+    
+    Args:
+        order: Order instance (billing.Order)
+    
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    # Get customer email from ticket's created_by user
+    ticket = order.ticket
+    if not ticket or not ticket.created_by:
+        return False
+    
+    customer_email = ticket.created_by.email
+    if not customer_email:
+        return False
+    
+    # Build survey URL using feedback token
+    site_url = settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS else 'epica.com.tr'
+    if not site_url.startswith('http'):
+        site_url = f'https://{site_url}'
+    survey_url = f"{site_url}/feedback/{order.feedback_token}/"
+    
+    # Check if organization has custom email settings
+    org = order.organization
+    use_org_settings = (
+        org.email_host and 
+        org.email_port and 
+        org.email_host_user and 
+        org.email_host_password
+    )
+    
+    # Configure email connection
+    if use_org_settings:
+        from django.core.mail import get_connection
+        connection = get_connection(
+            backend='django.core.mail.backends.smtp.EmailBackend',
+            host=org.email_host,
+            port=org.email_port,
+            username=org.email_host_user,
+            password=org.email_host_password,
+            use_tls=org.email_use_tls,
+            use_ssl=org.email_use_ssl,
+            fail_silently=False,
+        )
+        from_email = org.email_from_address or org.email_host_user
+    else:
+        connection = None  # Use default connection
+        from_email = settings.DEFAULT_FROM_EMAIL
+    
+    # Prepare email context
+    context = {
+        'order_id': order.id,
+        'customer_name': ticket.created_by.get_full_name() or ticket.created_by.username,
+        'supplier_name': order.supplier.name if order.supplier else 'Tedarikçi',
+        'delivery_date': order.actual_delivery_date or order.created_at.date(),
+        'survey_url': survey_url,
+        'organization_name': org.name,
+    }
+    
+    # Render email template
+    html_content = render_to_string('emails/order_completed_survey.html', context)
+    text_content = f"""
+Merhaba {context['customer_name']},
+
+#{context['order_id']} numaralı siparişiniz başarıyla tamamlandı ve tedarikçimiz {context['supplier_name']} tarafından teslim edildi.
+
+Lütfen 2 dakikanızı ayırarak siparişinizi değerlendirin:
+{survey_url}
+
+Geri bildirimleriniz hizmet kalitemizi artırmamıza yardımcı oluyor.
+
+Teşekkürler,
+{context['organization_name']} Ekibi
+    """.strip()
+    
+    # Create email
+    email = EmailMultiAlternatives(
+        subject=f'Siparişiniz Tamamlandı - Değerlendirin #{order.id}',
+        body=text_content,
+        from_email=from_email,
+        to=[customer_email],
+        reply_to=[from_email],
+        connection=connection,
+    )
+    email.attach_alternative(html_content, "text/html")
+    
+    try:
+        email.send()
+        return True
+    except Exception as e:
+        print(f"Failed to send survey email to {customer_email}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False

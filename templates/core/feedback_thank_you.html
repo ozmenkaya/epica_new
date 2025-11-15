@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5">
+	<div class="row justify-content-center">
+		<div class="col-md-6">
+			<div class="card shadow text-center">
+				<div class="card-body p-5">
+					<div class="mb-4">
+						<i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+					</div>
+					<h2 class="mb-3 text-success">{% trans "Değerlendirmeniz Alındı!" %}</h2>
+					<p class="lead">
+						{% trans "Geri bildiriminiz için çok teşekkür ederiz." %}
+					</p>
+					<p class="text-muted">
+						{% trans "Görüşleriniz hizmet kalitemizi artırmamıza yardımcı oluyor." %}
+					</p>
+					
+					<div class="mt-5 p-4 bg-light rounded">
+						<h5 class="mb-3">{% trans "Değerlendirme Özeti" %}</h5>
+						<div class="row g-3">
+							<div class="col-6">
+								<div class="text-muted small">{% trans "Ürün Kalitesi" %}</div>
+								<div class="fs-5">
+									{% for i in "12345"|make_list %}
+										{% if forloop.counter <= feedback.product_quality %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="col-6">
+								<div class="text-muted small">{% trans "İletişim" %}</div>
+								<div class="fs-5">
+									{% for i in "12345"|make_list %}
+										{% if forloop.counter <= feedback.communication %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="col-6">
+								<div class="text-muted small">{% trans "Teslimat" %}</div>
+								<div class="fs-5">
+									{% for i in "12345"|make_list %}
+										{% if forloop.counter <= feedback.delivery_time %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="col-6">
+								<div class="text-muted small">{% trans "Genel Memnuniyet" %}</div>
+								<div class="fs-5">
+									{% for i in "12345"|make_list %}
+										{% if forloop.counter <= feedback.overall_satisfaction %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+						{% if feedback.comment %}
+						<div class="mt-4 text-start">
+							<div class="text-muted small mb-2">{% trans "Yorumunuz" %}</div>
+							<div class="p-3 bg-white rounded border">
+								<em>{{ feedback.comment }}</em>
+							</div>
+						</div>
+						{% endif %}
+					</div>
+
+					<div class="mt-4">
+						<p class="small text-muted mb-0">
+							<i class="bi bi-info-circle"></i> 
+							{% trans "Bu pencereyi kapatabilirsiniz." %}
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}

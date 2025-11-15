@@ -31,6 +31,7 @@
             <th>{% trans "İsim" %}</th>
             <th>{% trans "Email" %}</th>
             <th>{% trans "Telefon" %}</th>
+            <th class="text-center">{% trans "Skor" %}</th>
             <th>{% trans "Oluşturuldu" %}</th>
             {% if tenant_is_owner or tenant_is_admin %}<th class="text-end">{% trans "İşlemler" %}</th>{% endif %}
           </tr>
@@ -45,6 +46,20 @@
             </td>
             <td><span class="text-muted">{{ s.email|default:"-" }}</span></td>
             <td><span class="text-muted">{{ s.phone|default:"-" }}</span></td>
+            <td class="text-center">
+              {% if s.metrics %}
+                <span class="badge 
+                  {% if s.metrics.overall_score >= 90 %}bg-success
+                  {% elif s.metrics.overall_score >= 75 %}bg-info
+                  {% elif s.metrics.overall_score >= 60 %}bg-warning
+                  {% else %}bg-secondary{% endif %}" 
+                  style="font-size: 0.9rem; min-width: 50px;">
+                  {{ s.metrics.overall_score|floatformat:0 }}
+                </span>
+              {% else %}
+                <span class="text-muted small">-</span>
+              {% endif %}
+            </td>
             <td><small class="text-muted">{{ s.created_at|date:"Y-m-d H:i" }}</small></td>
             {% if tenant_is_owner or tenant_is_admin %}
             <td class="text-end">
@@ -54,7 +69,7 @@
             {% endif %}
           </tr>
         {% empty %}
-          <tr><td colspan="5" class="text-center text-muted">{% trans "Kayıt yok" %}</td></tr>
+          <tr><td colspan="6" class="text-center text-muted">{% trans "Kayıt yok" %}</td></tr>
         {% endfor %}
         </tbody>
       </table>

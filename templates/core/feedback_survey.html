@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5">
+	<div class="row justify-content-center">
+		<div class="col-md-8">
+			<div class="card shadow">
+				<div class="card-header bg-primary text-white">
+					<h4 class="mb-0">
+						<i class="bi bi-star-fill"></i> {% trans "Siparişinizi Değerlendirin" %}
+					</h4>
+				</div>
+				<div class="card-body">
+					<div class="alert alert-info">
+						<strong>{% trans "Sipariş" %} #{{ order.id }}</strong><br>
+						<small>{% trans "Tedarikçi:" %} {{ supplier.name }}</small><br>
+						<small>{% trans "Tarih:" %} {{ order.created_at|date:"d.m.Y" }}</small>
+					</div>
+
+					<p class="lead">{% trans "Memnuniyetiniz bizim için çok önemli! Lütfen siparişinizi değerlendirin:" %}</p>
+
+					<form method="post" class="feedback-form">
+						{% csrf_token %}
+						
+						<div class="mb-4">
+							<label class="form-label fw-bold">1. {% trans "Ürün Kalitesi" %} <span class="text-danger">*</span></label>
+							<div class="rating-group">
+								{% for value, label in form.product_quality.field.choices %}
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="radio" 
+										   name="product_quality" id="quality_{{ value }}" 
+										   value="{{ value }}" required>
+									<label class="form-check-label" for="quality_{{ value }}">
+										{% for i in "12345"|make_list %}
+											{% if forloop.counter <= value %}⭐{% else %}☆{% endif %}
+										{% endfor %}
+									</label>
+								</div>
+								{% endfor %}
+							</div>
+						</div>
+
+						<div class="mb-4">
+							<label class="form-label fw-bold">2. {% trans "İletişim Kalitesi" %} <span class="text-danger">*</span></label>
+							<div class="rating-group">
+								{% for value, label in form.communication.field.choices %}
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="radio" 
+										   name="communication" id="comm_{{ value }}" 
+										   value="{{ value }}" required>
+									<label class="form-check-label" for="comm_{{ value }}">
+										{% for i in "12345"|make_list %}
+											{% if forloop.counter <= value %}⭐{% else %}☆{% endif %}
+										{% endfor %}
+									</label>
+								</div>
+								{% endfor %}
+							</div>
+						</div>
+
+						<div class="mb-4">
+							<label class="form-label fw-bold">3. {% trans "Teslimat Süresi" %} <span class="text-danger">*</span></label>
+							<div class="rating-group">
+								{% for value, label in form.delivery_time.field.choices %}
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="radio" 
+										   name="delivery_time" id="delivery_{{ value }}" 
+										   value="{{ value }}" required>
+									<label class="form-check-label" for="delivery_{{ value }}">
+										{% for i in "12345"|make_list %}
+											{% if forloop.counter <= value %}⭐{% else %}☆{% endif %}
+										{% endfor %}
+									</label>
+								</div>
+								{% endfor %}
+							</div>
+						</div>
+
+						<div class="mb-4">
+							<label class="form-label fw-bold">4. {% trans "Genel Memnuniyet" %} <span class="text-danger">*</span></label>
+							<div class="rating-group">
+								{% for value, label in form.overall_satisfaction.field.choices %}
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="radio" 
+										   name="overall_satisfaction" id="overall_{{ value }}" 
+										   value="{{ value }}" required>
+									<label class="form-check-label" for="overall_{{ value }}">
+										{% for i in "12345"|make_list %}
+											{% if forloop.counter <= value %}⭐{% else %}☆{% endif %}
+										{% endfor %}
+									</label>
+								</div>
+								{% endfor %}
+							</div>
+						</div>
+
+						<div class="mb-4">
+							<label class="form-label fw-bold">{% trans "Yorumunuz (Opsiyonel)" %}</label>
+							{{ form.comment }}
+						</div>
+
+						<div class="d-grid">
+							<button type="submit" class="btn btn-primary btn-lg">
+								<i class="bi bi-send"></i> {% trans "Değerlendirmeyi Gönder" %}
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<style>
+.rating-group {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+.rating-group .form-check-label {
+	font-size: 1.5rem;
+	cursor: pointer;
+}
+.rating-group .form-check-input:checked + label {
+	transform: scale(1.1);
+}
+</style>
+{% endblock %}

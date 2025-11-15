@@ -10,13 +10,14 @@ from django.forms import formset_factory
 from decimal import Decimal, ROUND_HALF_UP
 from django.contrib import messages
 from django_ratelimit.decorators import ratelimit
+from django.contrib.auth.decorators import login_required
 import logging
 
 logger = logging.getLogger(__name__)
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from billing.models import Order, OrderItem
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
 
 
@@ -26,7 +27,30 @@ def home(request):
 
 @tenant_member_required
 def dashboard(request):
-	return render(request, "core/dashboard.html", {"org": getattr(request, "tenant", None)})
+	org = getattr(request, "tenant", None)
+	context = {"org": org}
+	
+	if org:
+		# En iyi performans gösteren tedarikçiler (Top 5)
+		from .models_metrics import SupplierMetrics, CustomerFeedback
+		top_suppliers = (
+			SupplierMetrics.objects
+			.filter(organization=org, overall_score__gt=0)
+			.select_related('supplier')
+			.order_by('-overall_score')[:5]
+		)
+		context['top_suppliers'] = top_suppliers
+		
+		# Son müşteri değerlendirmeleri (Recent 5)
+		recent_feedback = (
+			CustomerFeedback.objects
+			.filter(order__organization=org)
+			.select_related('order__supplier', 'order__ticket__customer')
+			.order_by('-created_at')[:5]
+		)
+		context['recent_feedback'] = recent_feedback
+	
+	return render(request, "core/dashboard.html", context)
 
 
 def role_landing(request):
@@ -422,7 +446,27 @@ def suppliers_list(request):
 	if has_email:
 		qs = qs.filter(email__isnull=False).exclude(email="")
 	qs = qs.order_by("name")
-	return render(request, "core/suppliers_list.html", {"suppliers": qs, "org": org, "q": q, "has_email": has_email})
+	
+	# Tedarikçi metrikleri skorlarını al
+	from .models_metrics import SupplierMetrics
+	supplier_ids = list(qs.values_list('id', flat=True))
+	metrics_map = {
+		m.supplier_id: m 
+		for m in SupplierMetrics.objects.filter(supplier_id__in=supplier_ids, organization=org)
+	}
+	
+	# Her tedarikçiye metriklerini ekle
+	suppliers_with_metrics = []
+	for supplier in qs:
+		supplier.metrics = metrics_map.get(supplier.id)
+		suppliers_with_metrics.append(supplier)
+	
+	return render(request, "core/suppliers_list.html", {
+		"suppliers": suppliers_with_metrics, 
+		"org": org, 
+		"q": q, 
+		"has_email": has_email
+	})
 
 
 @tenant_role_required([Membership.Role.OWNER])
@@ -650,6 +694,32 @@ def supplier_detail(request, pk: int):
 		.order_by('-created_at')
 	)
 	
+	# Tedarikçi Metrikleri ve Skoru (SupplierMetrics)
+	from .models_metrics import SupplierMetrics
+	try:
+		metrics = SupplierMetrics.objects.get(supplier=supplier, organization=org)
+		has_metrics = True
+		
+		# Badge rengi belirleme (100 üzerinden skor)
+		score = float(metrics.overall_score)
+		if score >= 90:
+			badge_class = 'success'  # Gold
+			badge_text = 'Gold'
+		elif score >= 75:
+			badge_class = 'info'  # Silver
+			badge_text = 'Silver'
+		elif score >= 60:
+			badge_class = 'warning'  # Bronze
+			badge_text = 'Bronze'
+		else:
+			badge_class = 'secondary'
+			badge_text = 'Standard'
+	except SupplierMetrics.DoesNotExist:
+		metrics = None
+		has_metrics = False
+		badge_class = 'secondary'
+		badge_text = 'N/A'
+	
 	context = {
 		'org': org,
 		'supplier': supplier,
@@ -658,6 +728,10 @@ def supplier_detail(request, pk: int):
 		'tickets_with_quotes': tickets_with_quotes,
 		'tickets_without_quotes': tickets_without_quotes,
 		'accepted_quotes': accepted_quotes,
+		'metrics': metrics,
+		'has_metrics': has_metrics,
+		'badge_class': badge_class,
+		'badge_text': badge_text,
 	}
 	
 	return render(request, "core/supplier_detail.html", context)
@@ -2737,9 +2811,140 @@ def supplier_access_token(request, token: str):
 			"ticket": ticket,
 			"extra_fields": extra_fields,
 			"supplier": supplier,
-			"supplier_email": supplier_email,
-			"existing_quote": existing_quote,
-			"existing_unit_price": existing_unit_price,
-			"organization": ticket.organization,
-		},
+		"supplier_email": supplier_email,
+		"existing_quote": existing_quote,
+		"existing_unit_price": existing_unit_price,
+		"organization": ticket.organization,
+	},
+)
+
+
+def customer_feedback_survey(request, token: str):
+	"""Customer feedback survey page (no-auth via unique token)."""
+	from billing.models import Order
+	from .models import CustomerFeedback
+	from django import forms
+	
+	order = get_object_or_404(Order, feedback_token=token)
+	
+	# Check if feedback already exists
+	existing_feedback = CustomerFeedback.objects.filter(order=order).first()
+	if existing_feedback:
+		return render(request, "core/feedback_already_submitted.html", {
+			"order": order,
+			"feedback": existing_feedback,
+		})
+	
+	class FeedbackForm(forms.ModelForm):
+		class Meta:
+			model = CustomerFeedback
+			fields = ['product_quality', 'communication', 'delivery_time', 'overall_satisfaction', 'comment']
+			widgets = {
+				'product_quality': forms.RadioSelect(choices=CustomerFeedback.RATING_CHOICES),
+				'communication': forms.RadioSelect(choices=CustomerFeedback.RATING_CHOICES),
+				'delivery_time': forms.RadioSelect(choices=CustomerFeedback.RATING_CHOICES),
+				'overall_satisfaction': forms.RadioSelect(choices=CustomerFeedback.RATING_CHOICES),
+				'comment': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Yorumunuz (opsiyonel)'}),
+			}
+	
+	if request.method == "POST":
+		form = FeedbackForm(request.POST)
+		if form.is_valid():
+			feedback = form.save(commit=False)
+			feedback.order = order
+			feedback.supplier = order.supplier
+			feedback.customer = order.ticket.customer
+			feedback.organization = order.organization
+			feedback.save()
+			
+			logger.info(f"Customer feedback submitted for order #{order.id} by {order.ticket.customer.name}")
+			
+			return render(request, "core/feedback_thank_you.html", {
+				"order": order,
+				"feedback": feedback,
+			})
+		else:
+			messages.error(request, "Lütfen tüm zorunlu alanları doldurun.")
+	else:
+		form = FeedbackForm()
+	
+	return render(request, "core/feedback_survey.html", {
+		"order": order,
+		"form": form,
+		"supplier": order.supplier,
+		"customer": order.ticket.customer,
+	})
+
+
+@login_required
+def add_owner_review(request):
+	"""
+	Owner/Admin adds manual review/rating for supplier or customer.
+	Used in supplier_detail.html and customer_detail.html modals.
+	"""
+	if request.method != 'POST':
+		return redirect('dashboard')
+	
+	from .models_metrics import OwnerReview
+	
+	# Check permissions
+	tenant = request.tenant
+	if not (tenant.is_owner or tenant.is_admin):
+		return HttpResponseForbidden("Only owner/admin can add reviews")
+	
+	# Get form data
+	supplier_id = request.POST.get('supplier_id')
+	customer_id = request.POST.get('customer_id')
+	category = request.POST.get('category')
+	rating = request.POST.get('rating')
+	notes = request.POST.get('notes', '').strip()
+	redirect_to = request.POST.get('redirect_to', 'dashboard')
+	
+	# Validate inputs
+	if not category or not rating:
+		messages.error(request, "Kategori ve puan gereklidir.")
+		return redirect(redirect_to)
+	
+	try:
+		rating = int(rating)
+		if rating < 1 or rating > 5:
+			raise ValueError()
+	except ValueError:
+		messages.error(request, "Geçersiz puan değeri (1-5 arası olmalı)")
+		return redirect(redirect_to)
+	
+	# Must have either supplier_id or customer_id
+	if not supplier_id and not customer_id:
+		messages.error(request, "Tedarikçi veya müşteri seçilmelidir.")
+		return redirect(redirect_to)
+	
+	# Create review
+	review = OwnerReview(
+		organization=tenant.organization,
+		category=category,
+		rating=rating,
+		notes=notes or None,
 	)
+	
+	if supplier_id:
+		supplier = get_object_or_404(Supplier, id=supplier_id, organization=tenant.organization)
+		review.supplier = supplier
+	
+	if customer_id:
+		customer = get_object_or_404(Customer, id=customer_id, organization=tenant.organization)
+		review.customer = customer
+	
+	review.save()
+	
+	# Log event
+	logger.info(
+		"Owner review added: org=%s, supplier=%s, customer=%s, category=%s, rating=%s",
+		tenant.organization.id,
+		supplier_id or 'None',
+		customer_id or 'None',
+		category,
+		rating,
+	)
+	
+	messages.success(request, "Değerlendirme başarıyla kaydedildi!")
+	return redirect(redirect_to)

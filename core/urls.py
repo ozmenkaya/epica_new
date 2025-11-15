@@ -65,6 +65,10 @@ urlpatterns = [
     path("portal/supplier/products/<int:pk>/delete/", views.supplier_products_delete, name="supplier_products_delete"),
     # No-auth supplier access via token
     path("supplier-access/<uuid:token>/", views.supplier_access_token, name="supplier_access_token"),
+    # Customer feedback survey (no-auth via unique token)
+    path("feedback/<uuid:token>/", views.customer_feedback_survey, name="customer_feedback_survey"),
+    # Owner review submission
+    path("review/add/", views.add_owner_review, name="add_owner_review"),
     # Email webhook for incoming replies
     path("webhook/email/", views.email_webhook, name="email_webhook"),
 ]

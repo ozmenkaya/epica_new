@@ -1,5 +1,6 @@
 from django.db import models
 from decimal import Decimal
+import uuid
 from accounts.models import Organization
 from core.models import Ticket, Quote, QuoteItem, SupplierProduct, Supplier, CURRENCY_CHOICES
 
@@ -25,6 +26,8 @@ class Order(models.Model):
 	# Delivery tracking for metrics
 	estimated_delivery_date = models.DateField(null=True, blank=True, help_text="Owner tarafından belirlenen tahmini teslimat tarihi")
 	actual_delivery_date = models.DateField(null=True, blank=True, help_text="Gerçek teslimat tarihi")
+	# Unique token for customer feedback survey (no-auth access)
+	feedback_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:

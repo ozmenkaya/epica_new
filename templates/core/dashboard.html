@@ -1,24 +1,198 @@
-<!doctype html>
-<html lang="tr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Panel</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  </head>
-  <body>
-    <main class="container">
-      <h1>Dashboard</h1>
-      {% if org %}
-        <p>Aktif organizasyon: <strong>{{ org.name }}</strong> ({{ org.slug }})</p>
-        <p>
-          <a href="{% url 'customers_list' %}">Müşteriler</a>
-          ·
-          <a href="{% url 'suppliers_list' %}">Tedarikçiler</a>
-        </p>
-      {% else %}
-        <p>Hiç organizasyon seçili değil. <a href="/accounts/orgs/">Seç</a></p>
-      {% endif %}
-    </main>
-  </body>
-</html>
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+	<div class="row mb-4">
+		<div class="col-12">
+			<h2 class="mb-0">
+				<i class="bi bi-speedometer2"></i> {% trans "Dashboard" %}
+			</h2>
+			{% if org %}
+			<p class="text-muted">{{ org.name }}</p>
+			{% endif %}
+		</div>
+	</div>
+
+	{% if org %}
+	<!-- En İyi Tedarikçiler -->
+	{% if top_suppliers %}
+	<div class="row mb-4">
+		<div class="col-12">
+			<div class="card shadow-sm">
+				<div class="card-header bg-success text-white">
+					<h5 class="mb-0">
+						<i class="bi bi-trophy-fill"></i> {% trans "En İyi Performans Gösteren Tedarikçiler" %}
+					</h5>
+				</div>
+				<div class="card-body p-0">
+					<div class="table-responsive">
+						<table class="table table-hover mb-0">
+							<thead class="table-light">
+								<tr>
+									<th class="text-center" style="width: 60px;">#</th>
+									<th>{% trans "Tedarikçi" %}</th>
+									<th class="text-center">{% trans "Genel Skor" %}</th>
+									<th class="text-center">{% trans "Kazanma Oranı" %}</th>
+									<th class="text-center">{% trans "Zamanında Teslimat" %}</th>
+									<th class="text-center">{% trans "Müşteri Memnuniyeti" %}</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+							{% for metrics in top_suppliers %}
+								<tr>
+									<td class="text-center fw-bold">
+										{% if forloop.counter == 1 %}🥇
+										{% elif forloop.counter == 2 %}🥈
+										{% elif forloop.counter == 3 %}🥉
+										{% else %}{{ forloop.counter }}{% endif %}
+									</td>
+									<td class="fw-medium">{{ metrics.supplier.name }}</td>
+									<td class="text-center">
+										<span class="badge 
+											{% if metrics.overall_score >= 90 %}bg-success
+											{% elif metrics.overall_score >= 75 %}bg-info
+											{% elif metrics.overall_score >= 60 %}bg-warning
+											{% else %}bg-secondary{% endif %}" 
+											style="font-size: 1.1rem; min-width: 60px;">
+											{{ metrics.overall_score|floatformat:1 }}
+										</span>
+									</td>
+									<td class="text-center">%{{ metrics.win_rate_percent|floatformat:0 }}</td>
+									<td class="text-center">%{{ metrics.on_time_delivery_percent|floatformat:0 }}</td>
+									<td class="text-center">{{ metrics.avg_overall_satisfaction|floatformat:1 }}/5 ⭐</td>
+									<td class="text-end">
+										<a href="{% url 'supplier_detail' metrics.supplier.id %}" class="btn btn-sm btn-outline-primary">
+											{% trans "Detay" %}
+										</a>
+									</td>
+								</tr>
+							{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% endif %}
+
+	<!-- Son Müşteri Değerlendirmeleri -->
+	{% if recent_feedback %}
+	<div class="row mb-4">
+		<div class="col-12">
+			<div class="card shadow-sm">
+				<div class="card-header bg-info text-white">
+					<h5 class="mb-0">
+						<i class="bi bi-star-fill"></i> {% trans "Son Müşteri Değerlendirmeleri" %}
+					</h5>
+				</div>
+				<div class="card-body">
+					{% for feedback in recent_feedback %}
+					<div class="mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+						<div class="row align-items-center">
+							<div class="col-md-3">
+								<strong>{{ feedback.order.supplier.name }}</strong><br>
+								<small class="text-muted">{{ feedback.order.ticket.customer.name }}</small>
+							</div>
+							<div class="col-md-2 text-center">
+								<div class="small text-muted">{% trans "Ürün" %}</div>
+								<div>
+									{% for i in "12345" %}
+										{% if forloop.counter <= feedback.product_quality %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="col-md-2 text-center">
+								<div class="small text-muted">{% trans "İletişim" %}</div>
+								<div>
+									{% for i in "12345" %}
+										{% if forloop.counter <= feedback.communication %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="col-md-2 text-center">
+								<div class="small text-muted">{% trans "Teslimat" %}</div>
+								<div>
+									{% for i in "12345" %}
+										{% if forloop.counter <= feedback.delivery_time %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="col-md-2 text-center">
+								<div class="small text-muted">{% trans "Genel" %}</div>
+								<div>
+									{% for i in "12345" %}
+										{% if forloop.counter <= feedback.overall_satisfaction %}⭐{% else %}☆{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+							<div class="col-md-1 text-end">
+								<small class="text-muted">{{ feedback.created_at|date:"d.m.Y" }}</small>
+							</div>
+						</div>
+						{% if feedback.comment %}
+						<div class="mt-2">
+							<small class="text-muted"><em>"{{ feedback.comment|truncatewords:20 }}"</em></small>
+						</div>
+						{% endif %}
+					</div>
+					{% endfor %}
+				</div>
+			</div>
+		</div>
+	</div>
+	{% endif %}
+
+	<!-- Hızlı Erişim -->
+	<div class="row">
+		<div class="col-md-3 mb-3">
+			<a href="{% url 'customers_list' %}" class="text-decoration-none">
+				<div class="card shadow-sm h-100 text-center">
+					<div class="card-body">
+						<i class="bi bi-people-fill text-primary" style="font-size: 2.5rem;"></i>
+						<h5 class="mt-3">{% trans "Müşteriler" %}</h5>
+					</div>
+				</div>
+			</a>
+		</div>
+		<div class="col-md-3 mb-3">
+			<a href="{% url 'suppliers_list' %}" class="text-decoration-none">
+				<div class="card shadow-sm h-100 text-center">
+					<div class="card-body">
+						<i class="bi bi-building text-success" style="font-size: 2.5rem;"></i>
+						<h5 class="mt-3">{% trans "Tedarikçiler" %}</h5>
+					</div>
+				</div>
+			</a>
+		</div>
+		<div class="col-md-3 mb-3">
+			<a href="{% url 'tickets_list' %}" class="text-decoration-none">
+				<div class="card shadow-sm h-100 text-center">
+					<div class="card-body">
+						<i class="bi bi-ticket-detailed text-warning" style="font-size: 2.5rem;"></i>
+						<h5 class="mt-3">{% trans "Talepler" %}</h5>
+					</div>
+				</div>
+			</a>
+		</div>
+		<div class="col-md-3 mb-3">
+			<a href="{% url 'orders_list' %}" class="text-decoration-none">
+				<div class="card shadow-sm h-100 text-center">
+					<div class="card-body">
+						<i class="bi bi-box-seam text-info" style="font-size: 2.5rem;"></i>
+						<h5 class="mt-3">{% trans "Siparişler" %}</h5>
+					</div>
+				</div>
+			</a>
+		</div>
+	</div>
+
+	{% else %}
+	<div class="alert alert-warning">
+		{% trans "Hiç organizasyon seçili değil." %} <a href="/accounts/orgs/">{% trans "Seç" %}</a>
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
