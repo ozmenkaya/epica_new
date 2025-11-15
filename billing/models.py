@@ -22,6 +22,9 @@ class Order(models.Model):
 	supplier_acknowledged = models.BooleanField(default=False)
 	supplier_eta = models.DateField(null=True, blank=True)
 	supplier_note = models.TextField(blank=True)
+	# Delivery tracking for metrics
+	estimated_delivery_date = models.DateField(null=True, blank=True, help_text="Owner tarafından belirlenen tahmini teslimat tarihi")
+	actual_delivery_date = models.DateField(null=True, blank=True, help_text="Gerçek teslimat tarihi")
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:

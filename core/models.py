@@ -513,3 +513,15 @@ class QuoteComment(models.Model):
 
 	def __str__(self) -> str:
 		return f"Comment by {self.author_customer_id or 'anon'} on ticket {self.ticket_id}"
+
+
+# Import metrics models
+from .models_metrics import CustomerFeedback, OwnerReview, SupplierMetrics, CustomerMetrics
+
+__all__ = [
+	'Organization', 'Customer', 'Supplier', 'Category', 'CategoryFormField',
+	'CategorySupplierRule', 'Ticket', 'TicketEmailReply', 'TicketAttachment',
+	'Quote', 'QuoteItem', 'OwnerQuoteAdjustment', 'QuoteComment',
+	'SupplierProduct', 'CustomerFeedback', 'OwnerReview', 
+	'SupplierMetrics', 'CustomerMetrics',
+]
