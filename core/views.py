@@ -6,6 +6,7 @@ from .models import Customer, Supplier, Category, Ticket
 from .models import Customer, Supplier, Category, Ticket, TicketAttachment, Quote, SupplierProduct, QuoteItem, OwnerQuoteAdjustment, CategoryFormField, CategorySupplierRule
 from django.db import models
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from django.forms import formset_factory
 from decimal import Decimal, ROUND_HALF_UP
 from django.contrib import messages
@@ -1149,9 +1150,9 @@ class TicketForm(ModelForm):
 
 class SubRequestForm(forms.Form):
 	"""One line of a multi-request: choose category and write a description."""
-	category = forms.ModelChoiceField(queryset=Category.objects.none(), required=True, label="Kategori")
-	quantity = forms.IntegerField(min_value=1, initial=1, label="Adet")
-	description = forms.CharField(required=True, widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Açıklama"}), label="Açıklama")
+	category = forms.ModelChoiceField(queryset=Category.objects.none(), required=True, label=_("Kategori"))
+	quantity = forms.IntegerField(min_value=1, initial=1, label=_("Adet"))
+	description = forms.CharField(required=True, widget=forms.Textarea(attrs={"rows": 2, "placeholder": _("Açıklama")}), label=_("Açıklama"))
 
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop("organization", None)
@@ -1161,11 +1162,11 @@ class SubRequestForm(forms.Form):
 
 
 class TicketHeaderForm(forms.Form):
-	title = forms.CharField(max_length=200, required=True, label="Başlık")
+	title = forms.CharField(max_length=200, required=True, label=_("Başlık"))
 
 class OwnerTicketHeaderForm(forms.Form):
-	title = forms.CharField(max_length=200, required=True, label="Başlık")
-	customer = forms.ModelChoiceField(queryset=Customer.objects.none(), required=True, label="Müşteri")
+	title = forms.CharField(max_length=200, required=True, label=_("Başlık"))
+	customer = forms.ModelChoiceField(queryset=Customer.objects.none(), required=True, label=_("Müşteri"))
 
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop("organization", None)
@@ -1184,7 +1185,7 @@ class TicketAttachmentForm(forms.ModelForm):
 			# Dosya boyutu kontrolü (50MB limit)
 			max_size = 50 * 1024 * 1024  # 50MB
 			if file.size > max_size:
-				raise forms.ValidationError(f"Dosya boyutu {max_size / (1024*1024):.0f}MB'dan büyük olamaz.")
+				raise forms.ValidationError(_(f"Dosya boyutu {max_size / (1024*1024):.0f}MB'dan büyük olamaz."))
 			
 			# Dosya tipi kontrolü
 			allowed_extensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip']
@@ -1192,7 +1193,7 @@ class TicketAttachmentForm(forms.ModelForm):
 			
 			if file_ext not in allowed_extensions:
 				raise forms.ValidationError(
-					f"İzin verilen dosya formatları: {', '.join(allowed_extensions)}"
+					_(f"İzin verilen dosya formatları: {', '.join(allowed_extensions)}")
 				)
 			
 			# MIME type kontrolü (ek güvenlik)
@@ -1832,7 +1833,7 @@ class CategorySupplierRuleForm(forms.ModelForm):
 		all_fields = []
 		if self._category is not None:
 			all_fields = list(self._category.form_fields.order_by("order", "id").all())
-		name_choices = [("", "- Alan seçin -"), ("form-0-quantity", "Miktar (form-0-quantity)")] + [(f.name, f"{f.label} ({f.name})") for f in all_fields]
+		name_choices = [("", _("- Alan seçin -")), ("form-0-quantity", _("Miktar (form-0-quantity)"))] + [(f.name, f"{f.label} ({f.name})") for f in all_fields]
 		# Replace field_name with ChoiceField
 		self.fields["field_name"] = forms.ChoiceField(
 			choices=name_choices, required=False, label=self.fields["field_name"].label,
@@ -1860,7 +1861,7 @@ class CategorySupplierRuleForm(forms.ModelForm):
 		from .models import CategoryFormField as _CFF
 		if selected_field and selected_field.field_type == _CFF.FieldType.SELECT:
 			opts = [o.strip() for o in (selected_field.options or "").splitlines() if o.strip()]
-			choices = [("", "- Değer seçin -")] + [(o, o) for o in opts]
+			choices = [("", _("- Değer seçin -"))] + [(o, o) for o in opts]
 			# If operator is 'in', allow multi-select; else single select
 			if op == "in":
 				self.fields["field_value"] = forms.MultipleChoiceField(choices=choices[1:], required=False, label=self.fields["field_value"].label)
@@ -1907,14 +1908,14 @@ class CategorySupplierRuleForm(forms.ModelForm):
 		mn = cleaned.get("min_quantity")
 		mx = cleaned.get("max_quantity")
 		if mn is not None and mx is not None and mn > mx:
-			raise forms.ValidationError("En az adet, en çok adetten büyük olamaz.")
+			raise forms.ValidationError(_("En az adet, en çok adetten büyük olamaz."))
 		# Normalize to CSV for storage (support both single and multi-select cases)
 		fn_val = cleaned.get("field_name")
 		fv_val = cleaned.get("field_value")
 		# If any of field_operator/value provided, require field_name
 		op = (cleaned.get("field_operator") or "").strip()
 		if (op or fv_val) and not fn_val:
-			raise forms.ValidationError("Alan filtresi için alan adı gereklidir.")
+			raise forms.ValidationError(_("Alan filtresi için alan adı gereklidir."))
 		cleaned["field_name"] = ",".join([str(v) for v in fn_val]) if isinstance(fn_val, (list, tuple)) else (fn_val or "")
 		cleaned["field_value"] = ",".join([str(v) for v in fv_val]) if isinstance(fv_val, (list, tuple)) else (fv_val or "")
 		return cleaned

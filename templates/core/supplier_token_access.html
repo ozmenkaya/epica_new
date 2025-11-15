@@ -25,7 +25,7 @@
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-6">
-              <small class="text-muted d-block">Organizasyon</small>
+              <small class="text-muted d-block">{% trans "Organizasyon" %}</small>
               <strong>{{ organization.name }}</strong>
             </div>
             <div class="col-md-6">
@@ -55,7 +55,7 @@
 
           {% if extra_fields %}
           <div class="mt-3">
-            <small class="text-muted d-block mb-2">Form Yanıtları</small>
+            <small class="text-muted d-block mb-2">{% trans "Form Yanıtları" %}</small>
             <div class="bg-light p-2 rounded small">
               {% for field in extra_fields %}
                 <div class="mb-1"><span class="text-muted">{{ field.label }}:</span> <strong>{{ field.value }}</strong></div>

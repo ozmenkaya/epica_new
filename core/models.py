@@ -131,26 +131,26 @@ class CategorySupplierRule(models.Model):
 	"""
 	organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="category_supplier_rules")
 	category = models.ForeignKey('Category', on_delete=models.CASCADE, related_name='supplier_rules')
-	label = models.CharField(max_length=120)
-	is_active = models.BooleanField(default=True)
-	order = models.PositiveIntegerField(default=0)
+	label = models.CharField(max_length=120, verbose_name=_("Etiket"))
+	is_active = models.BooleanField(default=True, verbose_name=_("Aktif"))
+	order = models.PositiveIntegerField(default=0, verbose_name=_("Sıra"))
 	# Quantity condition
-	min_quantity = models.PositiveIntegerField(null=True, blank=True)
-	max_quantity = models.PositiveIntegerField(null=True, blank=True)
+	min_quantity = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("En Az Adet"))
+	max_quantity = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("En Çok Adet"))
 	# Dynamic field condition (matches Ticket.extra_data)
-	field_name = models.CharField(max_length=100, blank=True, help_text="Category form field key (name)")
-	field_operator = models.CharField(max_length=20, blank=True, choices=(
+	field_name = models.CharField(max_length=100, blank=True, verbose_name=_("Alan Adı"), help_text=_("Kategori form alan anahtarı"))
+	field_operator = models.CharField(max_length=20, blank=True, verbose_name=_("Operatör"), choices=(
 		("eq", "="), 
 		("neq", "!="), 
 		("gt", ">"), 
 		("gte", ">="), 
 		("lt", "<"), 
 		("lte", "<="), 
-		("contains", "içerir"), 
-		("in", "şunlardan biri (virgülle ayırın)")
+		("contains", _("içerir")), 
+		("in", _("şunlardan biri (virgülle ayırın)"))
 	))
-	field_value = models.CharField(max_length=255, blank=True)
-	suppliers = models.ManyToManyField('Supplier', related_name='category_rules', blank=True)
+	field_value = models.CharField(max_length=255, blank=True, verbose_name=_("Değer"))
+	suppliers = models.ManyToManyField('Supplier', related_name='category_rules', blank=True, verbose_name=_("Tedarikçiler"))
 
 	class Meta:
 		ordering = ["category", "order", "id"]

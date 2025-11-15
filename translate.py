@@ -119,6 +119,41 @@ TRANSLATIONS = {
     "Select için seçenekleri satır satır yazın": "Write options line by line for Select",
     "- Alan seçin -": "- Select field -",
     "Miktar (form-0-quantity)": "Quantity (form-0-quantity)",
+    "- Değer seçin -": "- Select value -",
+    
+    # Category Rules
+    "Kategori Kuralları": "Category Rules",
+    "Kural": "Rule",
+    "Kurallar": "Rules",
+    "Yeni Kural": "New Rule",
+    "En Az Adet": "Minimum Quantity",
+    "En Çok Adet": "Maximum Quantity",
+    "Operatör": "Operator",
+    "Değer": "Value",
+    "Alan Koşulu": "Field Condition",
+    "Adet Aralığı": "Quantity Range",
+    "içerir": "contains",
+    "şunlardan biri (virgülle ayırın)": "one of (comma-separated)",
+    "Kategori form alan anahtarı": "Category form field key",
+    "Alan filtresi için alan adı gereklidir.": "Field name is required for field filter.",
+    "En az adet, en çok adetten büyük olamaz.": "Minimum quantity cannot be greater than maximum quantity.",
+    "Alan anahtarları": "Field keys",
+    "Henüz kural yok.": "No rules yet.",
+    "ve": "and",
+    
+    # Supplier Form
+    "Mevcut Tedarikçi Bulundu": "Existing Supplier Found",
+    "isimli tedarikçi sistemde zaten kayıtlı.": "supplier already exists in the system.",
+    "Bu tedarikçiyi organizasyonunuza eklemek istiyor musunuz?": "Would you like to add this supplier to your organization?",
+    
+    # Portal & Common
+    "Organizasyon": "Organization",
+    "Form Yanıtları": "Form Responses",
+    "Genel toplam": "Grand total",
+    "Teklife Yorum Yaz": "Write Comment on Quote",
+    "Yorumu Gönder": "Send Comment",
+    "Dosya boyutu {max_size / (1024*1024):.0f}MB'dan büyük olamaz.": "File size cannot exceed {max_size / (1024*1024):.0f}MB.",
+    "İzin verilen dosya formatları: {', '.join(allowed_extensions)}": "Allowed file formats: {', '.join(allowed_extensions)}",
     
     # Status & Messages
     "Bekliyor": "Pending",

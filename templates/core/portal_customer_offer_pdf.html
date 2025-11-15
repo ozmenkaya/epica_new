@@ -23,7 +23,7 @@
   </div>
   {% if extra_fields %}
   <div class="meta">
-    <strong>Form Yanıtları:</strong>
+    <strong>{% trans "Form Yanıtları" %}:</strong>
     <ul>
       {% for f in extra_fields %}
         <li>{{ f.label }}: {{ f.value }}</li>

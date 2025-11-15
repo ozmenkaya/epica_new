@@ -10,12 +10,12 @@
   <div class="card-body">
     {% if show_confirmation %}
       <div class="alert alert-warning">
-        <h6><i class="bi bi-exclamation-triangle"></i> Mevcut Tedarikçi Bulundu</h6>
+        <h6><i class="bi bi-exclamation-triangle"></i> {% trans "Mevcut Tedarikçi Bulundu" %}</h6>
         <p class="mb-2">
-          <strong>{{ existing_supplier.name }}</strong> ({{ existing_supplier.email }}) isimli tedarikçi sistemde zaten kayıtlı.
+          <strong>{{ existing_supplier.name }}</strong> ({{ existing_supplier.email }}) {% trans "isimli tedarikçi sistemde zaten kayıtlı." %}
         </p>
         <p class="mb-3">
-          Bu tedarikçiyi organizasyonunuza eklemek istiyor musunuz?
+          {% trans "Bu tedarikçiyi organizasyonunuza eklemek istiyor musunuz?" %}
         </p>
         <form method="post">
           {% csrf_token %}
