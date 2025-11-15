@@ -140,7 +140,8 @@ TRANSLATIONS = {
     "Alan anahtarları": "Field keys",
     "Alanı Sil": "Delete Field",
     "Evet, Sil": "Yes, Delete",
-    "\"{{ label }}\" alanını silmek istediğinize emin misiniz?": "Are you sure you want to delete the \"{{ label }}\" field?",
+    '"{{ label }}" alanını silmek istediğinize emin misiniz?': 'Are you sure you want to delete the "{{ label }}" field?',
+    "Konu": "Subject",
     "Henüz kural yok.": "No rules yet.",
     "ve": "and",
     

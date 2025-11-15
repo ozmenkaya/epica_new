@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-15 15:08+0300\n"
+"POT-Creation-Date: 2025-11-15 15:22+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1478,6 +1478,10 @@ msgstr ""
 
 #: templates/core/ticket_detail_owner.html:100
 msgid "Tedarikçi Email Yanıtları"
+msgstr ""
+
+#: templates/core/ticket_detail_owner.html:113
+msgid "Konu"
 msgstr ""
 
 #: templates/core/ticket_detail_owner.html:126

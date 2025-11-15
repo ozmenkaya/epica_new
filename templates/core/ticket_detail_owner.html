@@ -110,7 +110,7 @@
                 </div>
               </div>
               {% if reply.subject %}
-              <div class="mb-1"><strong>Konu:</strong> {{ reply.subject }}</div>
+              <div class="mb-1"><strong>{% trans "Konu" %}:</strong> {{ reply.subject }}</div>
               {% endif %}
               <div class="bg-light p-2 rounded">{{ reply.body|linebreaksbr }}</div>
             </li>
