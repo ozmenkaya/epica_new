@@ -280,39 +280,38 @@ def get_quote_stats(organization, period: str = 'month'):
 
 def search_customer_orders(organization, customer_name: str):
     """
-    Search orders by customer/portal user name
+    Search orders by customer name or email
     
     Args:
         organization: Organization instance
-        customer_name: Customer name to search for
+        customer_name: Customer name or email to search for
         
     Returns:
         Dict with order results
     """
     try:
-        # Search for orders where ticket's portal_user matches
+        # Search for orders where ticket's customer matches
         orders = Order.objects.filter(
             organization=organization,
-            ticket__portal_user__email__icontains=customer_name
+            ticket__customer__email__icontains=customer_name
         ) | Order.objects.filter(
             organization=organization,
-            ticket__portal_user__first_name__icontains=customer_name
-        ) | Order.objects.filter(
-            organization=organization,
-            ticket__portal_user__last_name__icontains=customer_name
+            ticket__customer__name__icontains=customer_name
         )
         
-        orders = orders.select_related('ticket__portal_user', 'supplier').order_by('-created_at')[:20]
+        orders = orders.select_related('ticket__customer', 'supplier').distinct().order_by('-created_at')[:20]
         
         results = []
         total_amount = 0
         
         for order in orders:
+            customer = order.ticket.customer
             results.append({
                 'order_id': order.id,
                 'ticket_id': order.ticket_id,
-                'customer': order.ticket.portal_user.email,
-                'customer_name': f"{order.ticket.portal_user.first_name} {order.ticket.portal_user.last_name}".strip(),
+                'customer_email': customer.email or '',
+                'customer_name': customer.name,
+                'customer_phone': customer.phone or '',
                 'supplier': order.supplier.name if order.supplier else 'N/A',
                 'status': order.status,
                 'total': float(order.total),
@@ -371,9 +370,9 @@ def get_order_stats(organization, period: str = 'month'):
         
         # Top customers
         top_customers = orders.values(
-            'ticket__portal_user__email',
-            'ticket__portal_user__first_name',
-            'ticket__portal_user__last_name'
+            'ticket__customer__email',
+            'ticket__customer__name',
+            'ticket__customer__phone'
         ).annotate(
             order_count=Count('id'),
             total_spent=Sum('total')
@@ -387,8 +386,9 @@ def get_order_stats(organization, period: str = 'month'):
             'by_status': {item['status']: item['count'] for item in status_breakdown},
             'top_customers': [
                 {
-                    'email': item['ticket__portal_user__email'],
-                    'name': f"{item['ticket__portal_user__first_name']} {item['ticket__portal_user__last_name']}".strip(),
+                    'email': item['ticket__customer__email'] or '',
+                    'name': item['ticket__customer__name'],
+                    'phone': item['ticket__customer__phone'] or '',
                     'order_count': item['order_count'],
                     'total_spent': float(item['total_spent'])
                 }
