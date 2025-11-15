@@ -2905,57 +2905,71 @@ def add_owner_review(request):
 	# Get form data
 	supplier_id = request.POST.get('supplier_id')
 	customer_id = request.POST.get('customer_id')
-	category = request.POST.get('category')
-	rating = request.POST.get('rating')
 	comment = request.POST.get('comment', '').strip()
 	redirect_to = request.POST.get('redirect_to', 'dashboard')
-	
-	# Validate inputs
-	if not category or not rating:
-		messages.error(request, "Kategori ve puan gereklidir.")
-		return redirect(redirect_to)
-	
-	try:
-		rating = int(rating)
-		if rating < 1 or rating > 5:
-			raise ValueError()
-	except ValueError:
-		messages.error(request, "Geçersiz puan değeri (1-5 arası olmalı)")
-		return redirect(redirect_to)
 	
 	# Must have either supplier_id or customer_id
 	if not supplier_id and not customer_id:
 		messages.error(request, "Tedarikçi veya müşteri seçilmelidir.")
 		return redirect(redirect_to)
 	
-	# Create review
-	review = OwnerReview(
-		organization=org,
-		reviewer=request.user,
-		category=category,
-		rating=rating,
-		comment=comment or '',
-	)
-	
+	# Get supplier or customer object
+	supplier = None
+	customer = None
 	if supplier_id:
 		supplier = get_object_or_404(Supplier, id=supplier_id, organizations=org)
-		review.supplier = supplier
-	
 	if customer_id:
 		customer = get_object_or_404(Customer, id=customer_id, organization=org)
-		review.customer = customer
 	
-	review.save()
+	# Collect all category ratings from POST data
+	categories = ['reliability', 'communication', 'quality', 'payment', 'pricing']
+	ratings_data = []
+	
+	for category in categories:
+		rating_value = request.POST.get(f'rating_{category}')
+		if rating_value:
+			try:
+				rating_int = int(rating_value)
+				if 1 <= rating_int <= 5:
+					ratings_data.append({
+						'category': category,
+						'rating': rating_int
+					})
+			except ValueError:
+				continue
+	
+	# Validate at least one rating
+	if not ratings_data:
+		messages.error(request, "En az bir kategori için puan verilmelidir.")
+		return redirect(redirect_to)
+	
+	# Create a review for each rated category
+	created_count = 0
+	for data in ratings_data:
+		review = OwnerReview(
+			organization=org,
+			reviewer=request.user,
+			category=data['category'],
+			rating=data['rating'],
+			comment=comment or '',
+		)
+		
+		if supplier:
+			review.supplier = supplier
+		if customer:
+			review.customer = customer
+		
+		review.save()
+		created_count += 1
 	
 	# Log event
 	logger.info(
-		"Owner review added: org=%s, supplier=%s, customer=%s, category=%s, rating=%s",
+		"Owner reviews added: org=%s, supplier=%s, customer=%s, count=%d",
 		org.id,
 		supplier_id or 'None',
 		customer_id or 'None',
-		category,
-		rating,
+		created_count,
 	)
 	
-	messages.success(request, "Değerlendirme başarıyla kaydedildi!")
+	messages.success(request, f"{created_count} kategori için değerlendirme başarıyla kaydedildi!")
 	return redirect(redirect_to)

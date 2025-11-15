@@ -317,50 +317,100 @@
 				
 				<div class="modal-body">
 					<div class="mb-4">
-						<label class="form-label fw-bold">{% trans "Değerlendirme Kategorisi" %}</label>
-						<div class="list-group">
-							<label class="list-group-item list-group-item-action">
-								<input class="form-check-input me-2" type="radio" name="category" value="reliability" required>
-								<strong>{% trans "Güvenilirlik" %}</strong>
-								<small class="d-block text-muted">Taahhütlerine uyma, söz verdiğini yapma</small>
-							</label>
-							<label class="list-group-item list-group-item-action">
-								<input class="form-check-input me-2" type="radio" name="category" value="communication" required>
-								<strong>{% trans "İletişim" %}</strong>
-								<small class="d-block text-muted">Yanıt hızı, iletişim kalitesi</small>
-							</label>
-							<label class="list-group-item list-group-item-action">
-								<input class="form-check-input me-2" type="radio" name="category" value="quality" required>
-								<strong>{% trans "Kalite" %}</strong>
-								<small class="d-block text-muted">Ürün/hizmet kalitesi</small>
-							</label>
-							<label class="list-group-item list-group-item-action">
-								<input class="form-check-input me-2" type="radio" name="category" value="payment" required>
-								<strong>{% trans "Ödeme" %}</strong>
-								<small class="d-block text-muted">Ödeme şartlarına uyum</small>
-							</label>
-							<label class="list-group-item list-group-item-action">
-								<input class="form-check-input me-2" type="radio" name="category" value="pricing" required>
-								<strong>{% trans "Fiyatlandırma" %}</strong>
-								<small class="d-block text-muted">Fiyat/performans dengesi</small>
-							</label>
-						</div>
-					</div>
-					
-					<div class="mb-4">
-						<label class="form-label fw-bold text-center d-block">{% trans "Puan (1-5 Yıldız)" %}</label>
-						<div class="star-rating-container p-3" style="background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px;">
-							<div class="star-rating d-flex justify-content-center gap-2">
+						<label class="form-label fw-bold mb-3">{% trans "Her Kategori İçin Puanlama Yapın" %}</label>
+						
+						<!-- Güvenilirlik -->
+						<div class="category-rating-row mb-3 p-3 border rounded">
+							<div class="d-flex justify-content-between align-items-start mb-2">
+								<div>
+									<strong>{% trans "Güvenilirlik" %}</strong>
+									<small class="d-block text-muted">Taahhütlerine uyma, söz verdiğini yapma</small>
+								</div>
+							</div>
+							<div class="star-group d-flex gap-1" data-category="reliability">
 								{% for i in "12345" %}
-								<label class="star-label" data-value="{{ i }}">
-									<input type="radio" name="rating" value="{{ i }}" style="display: none;">
-									<i class="bi bi-star" style="font-size: 3.5rem; cursor: pointer; color: #c4c4c4;"></i>
+								<label class="star-item" data-value="{{ i }}">
+									<input type="radio" name="rating_reliability" value="{{ i }}" style="display: none;">
+									<i class="bi bi-star" style="font-size: 1.5rem; cursor: pointer; color: #c4c4c4;"></i>
 								</label>
 								{% endfor %}
 							</div>
-							<div class="invalid-feedback d-none text-center mt-2" id="rating-error">
-								{% trans "Lütfen bir puan seçin" %}
+						</div>
+						
+						<!-- İletişim -->
+						<div class="category-rating-row mb-3 p-3 border rounded">
+							<div class="d-flex justify-content-between align-items-start mb-2">
+								<div>
+									<strong>{% trans "İletişim" %}</strong>
+									<small class="d-block text-muted">Yanıt hızı, iletişim kalitesi</small>
+								</div>
 							</div>
+							<div class="star-group d-flex gap-1" data-category="communication">
+								{% for i in "12345" %}
+								<label class="star-item" data-value="{{ i }}">
+									<input type="radio" name="rating_communication" value="{{ i }}" style="display: none;">
+									<i class="bi bi-star" style="font-size: 1.5rem; cursor: pointer; color: #c4c4c4;"></i>
+								</label>
+								{% endfor %}
+							</div>
+						</div>
+						
+						<!-- Kalite -->
+						<div class="category-rating-row mb-3 p-3 border rounded">
+							<div class="d-flex justify-content-between align-items-start mb-2">
+								<div>
+									<strong>{% trans "Kalite" %}</strong>
+									<small class="d-block text-muted">Ürün/hizmet kalitesi</small>
+								</div>
+							</div>
+							<div class="star-group d-flex gap-1" data-category="quality">
+								{% for i in "12345" %}
+								<label class="star-item" data-value="{{ i }}">
+									<input type="radio" name="rating_quality" value="{{ i }}" style="display: none;">
+									<i class="bi bi-star" style="font-size: 1.5rem; cursor: pointer; color: #c4c4c4;"></i>
+								</label>
+								{% endfor %}
+							</div>
+						</div>
+						
+						<!-- Ödeme -->
+						<div class="category-rating-row mb-3 p-3 border rounded">
+							<div class="d-flex justify-content-between align-items-start mb-2">
+								<div>
+									<strong>{% trans "Ödeme" %}</strong>
+									<small class="d-block text-muted">Ödeme şartlarına uyum</small>
+								</div>
+							</div>
+							<div class="star-group d-flex gap-1" data-category="payment">
+								{% for i in "12345" %}
+								<label class="star-item" data-value="{{ i }}">
+									<input type="radio" name="rating_payment" value="{{ i }}" style="display: none;">
+									<i class="bi bi-star" style="font-size: 1.5rem; cursor: pointer; color: #c4c4c4;"></i>
+								</label>
+								{% endfor %}
+							</div>
+						</div>
+						
+						<!-- Fiyatlandırma -->
+						<div class="category-rating-row mb-3 p-3 border rounded">
+							<div class="d-flex justify-content-between align-items-start mb-2">
+								<div>
+									<strong>{% trans "Fiyatlandırma" %}</strong>
+									<small class="d-block text-muted">Fiyat/performans dengesi</small>
+								</div>
+							</div>
+							<div class="star-group d-flex gap-1" data-category="pricing">
+								{% for i in "12345" %}
+								<label class="star-item" data-value="{{ i }}">
+									<input type="radio" name="rating_pricing" value="{{ i }}" style="display: none;">
+									<i class="bi bi-star" style="font-size: 1.5rem; cursor: pointer; color: #c4c4c4;"></i>
+								</label>
+								{% endfor %}
+							</div>
+						</div>
+						
+						<div class="invalid-feedback d-none text-center mt-2" id="rating-error">
+							{% trans "Lütfen en az bir kategori için puan verin" %}
 						</div>
 					</div>
 					
@@ -384,22 +434,23 @@
 </div>
 
 <style>
-.list-group-item:has(input:checked) {
-	background-color: #fff3cd;
-	border-color: #ffc107;
+.category-rating-row {
+	background-color: #f8f9fa;
+	transition: all 0.2s;
 }
-.star-rating .star-label i.bi-star-fill {
+.category-rating-row:hover {
+	background-color: #fff;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.star-group .star-item i.bi-star-fill {
 	color: #ffd700 !important;
 }
-.star-rating .star-label i.bi-star {
+.star-group .star-item i.bi-star {
 	color: #c4c4c4 !important;
+	transition: all 0.15s ease;
 }
-.star-rating .star-label:hover i {
-	transform: scale(1.1);
-	transition: transform 0.15s ease;
-}
-.star-rating-container {
-	box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+.star-group .star-item:hover i {
+	transform: scale(1.15);
 }
 .invalid-feedback.d-block {
 	display: block !important;
@@ -410,59 +461,70 @@
 </style>
 
 <script>
-// Interactive star rating
+// Category star rating system
 document.addEventListener('DOMContentLoaded', function() {
-	const stars = document.querySelectorAll('.star-rating .star-label');
+	const starGroups = document.querySelectorAll('.star-group');
 	const ratingError = document.getElementById('rating-error');
 	const reviewForm = document.getElementById('ownerReviewForm');
-	let selectedRating = 0;
 	
-	stars.forEach((star, index) => {
-		const starIcon = star.querySelector('i');
-		const input = star.querySelector('input');
+	// Track ratings for each category
+	const categoryRatings = {};
+	
+	starGroups.forEach(group => {
+		const category = group.dataset.category;
+		const stars = group.querySelectorAll('.star-item');
+		categoryRatings[category] = 0;
 		
-		// Click to select
-		star.addEventListener('click', function() {
-			selectedRating = index + 1;
-			input.checked = true;
-			updateStars();
-			// Hide error when rating is selected
-			if(ratingError) {
-				ratingError.classList.add('d-none');
-			}
+		stars.forEach((star, index) => {
+			const starIcon = star.querySelector('i');
+			const input = star.querySelector('input');
+			
+			// Click to select
+			star.addEventListener('click', function() {
+				categoryRatings[category] = index + 1;
+				input.checked = true;
+				updateStarsInGroup(stars, categoryRatings[category]);
+				
+				// Hide error when any rating is selected
+				if(ratingError) {
+					ratingError.classList.add('d-none');
+				}
+			});
+			
+			// Hover effect
+			star.addEventListener('mouseenter', function() {
+				for(let i = 0; i <= index; i++) {
+					stars[i].querySelector('i').classList.remove('bi-star');
+					stars[i].querySelector('i').classList.add('bi-star-fill');
+				}
+			});
 		});
 		
-		// Hover effect
-		star.addEventListener('mouseenter', function() {
-			for(let i = 0; i <= index; i++) {
-				stars[i].querySelector('i').classList.remove('bi-star');
-				stars[i].querySelector('i').classList.add('bi-star-fill');
-			}
+		// Reset on mouse leave
+		group.addEventListener('mouseleave', function() {
+			updateStarsInGroup(stars, categoryRatings[category]);
 		});
-	});
-	
-	// Reset on mouse leave
-	document.querySelector('.star-rating').addEventListener('mouseleave', function() {
-		updateStars();
 	});
 	
 	// Form validation
 	if(reviewForm) {
 		reviewForm.addEventListener('submit', function(e) {
-			if(selectedRating === 0) {
+			const hasAnyRating = Object.values(categoryRatings).some(rating => rating > 0);
+			
+			if(!hasAnyRating) {
 				e.preventDefault();
 				if(ratingError) {
 					ratingError.classList.remove('d-none');
 					ratingError.classList.add('d-block');
 				}
-				// Scroll to rating section
-				document.querySelector('.star-rating-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+				// Scroll to first category
+				document.querySelector('.category-rating-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
 				return false;
 			}
 		});
 	}
 	
-	function updateStars() {
+	function updateStarsInGroup(stars, selectedRating) {
 		stars.forEach((star, index) => {
 			const icon = star.querySelector('i');
 			if(index < selectedRating) {
