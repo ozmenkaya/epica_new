@@ -1,0 +1,54 @@
+{
+  // Python ayarları
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.languageServer": "Pylance",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.testing.pytestArgs": [
+    "."
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  
+  // Copilot için dosya hariç tutma
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/node_modules": true,
+    "**/.venv": false,
+    "**/staticfiles": true,
+    "**/media": true,
+    "**/.git": true,
+    "**/db.sqlite3": true
+  },
+  
+  // Agent için daha iyi arama
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/staticfiles": true,
+    "**/__pycache__": true,
+    "**/db.sqlite3": true,
+    "**/*.pyc": true
+  },
+  
+  // Editor ayarları
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  
+  // Django şablonları için
+  "files.associations": {
+    "*.html": "html",
+    "**/*.html": "html"
+  },
+  
+  // Git
+  "git.ignoreLimitWarning": true,
+  
+  // Terminal
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "${workspaceFolder}"
+  }
+}

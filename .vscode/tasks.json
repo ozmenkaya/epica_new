@@ -1,0 +1,81 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Django Server",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["manage.py", "runserver"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Tests",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["manage.py", "test"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Make Migrations",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["manage.py", "makemigrations"],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Migrate Database",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["manage.py", "migrate"],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Collect Static Files",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["manage.py", "collectstatic", "--noinput"],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Deploy to Production",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "~/.ssh/id_ed25519_lethe_epica",
+        "root@78.46.162.116",
+        "cd /opt/epica && git pull && source venv/bin/activate && python manage.py collectstatic --noinput && systemctl restart epica && sleep 3 && systemctl status epica --no-pager | head -8"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Git Push and Deploy",
+      "type": "shell",
+      "command": "git push origin main && ssh -i ~/.ssh/id_ed25519_lethe_epica root@78.46.162.116 'cd /opt/epica && git pull && source venv/bin/activate && python manage.py collectstatic --noinput && systemctl restart epica'",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}

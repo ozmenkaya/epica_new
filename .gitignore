@@ -24,12 +24,14 @@ venv/
 ENV/
 
 # IDEs
-.vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+
+# Keep VS Code settings for AI Agent
+# .vscode/ is tracked for better collaboration
 
 # Testing
 .coverage
