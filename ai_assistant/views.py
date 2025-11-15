@@ -216,3 +216,52 @@ def delete_conversation(request, conversation_id):
         'success': True,
         'message': 'Conversation deleted'
     })
+
+
+@login_required
+@require_http_methods(["POST"])
+def message_feedback(request, message_id):
+    """
+    Submit feedback for an AI assistant message
+    """
+    try:
+        organization = get_current_org(request)
+        
+        # Get message and verify ownership
+        message = get_object_or_404(
+            Message,
+            id=message_id,
+            conversation__organization=organization,
+            conversation__user=request.user,
+            role='assistant'
+        )
+        
+        # Parse request body
+        data = json.loads(request.body)
+        feedback = data.get('feedback')
+        feedback_comment = data.get('feedback_comment', '')
+        
+        # Validate feedback type
+        if feedback not in ['positive', 'negative']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid feedback type'
+            }, status=400)
+        
+        # Update message feedback
+        from django.utils import timezone
+        message.feedback = feedback
+        message.feedback_comment = feedback_comment
+        message.feedback_at = timezone.now()
+        message.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Feedback saved'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

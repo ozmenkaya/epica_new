@@ -30,6 +30,11 @@ class Message(models.Model):
         ('system', 'System'),
     ]
     
+    FEEDBACK_CHOICES = [
+        ('positive', 'Positive'),
+        ('negative', 'Negative'),
+    ]
+    
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     content = models.TextField()
@@ -39,10 +44,16 @@ class Message(models.Model):
     # Optional: store function calls/actions taken
     function_call = models.JSONField(null=True, blank=True)
     
+    # User feedback
+    feedback = models.CharField(max_length=10, choices=FEEDBACK_CHOICES, null=True, blank=True)
+    feedback_comment = models.TextField(blank=True)
+    feedback_at = models.DateTimeField(null=True, blank=True)
+    
     class Meta:
         ordering = ['created_at']
         indexes = [
             models.Index(fields=['conversation', 'created_at']),
+            models.Index(fields=['feedback', '-created_at']),
         ]
     
     def __str__(self):

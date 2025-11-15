@@ -168,7 +168,7 @@ def search_suppliers(organization, query: str):
     """
     try:
         suppliers = Supplier.objects.filter(
-            organization=organization,
+            organizations__in=[organization],
             name__icontains=query
         )[:10]
         
@@ -178,10 +178,9 @@ def search_suppliers(organization, query: str):
             results.append({
                 'id': supplier.id,
                 'name': supplier.name,
-                'email': supplier.email,
+                'email': supplier.email or '',
                 'phone': supplier.phone or '',
-                'categories': categories,
-                'is_active': supplier.is_active
+                'categories': categories
             })
         
         return {
@@ -205,11 +204,9 @@ def get_supplier_stats(organization):
         Dict with statistics
     """
     try:
-        suppliers = Supplier.objects.filter(organization=organization)
+        suppliers = Supplier.objects.filter(organizations__in=[organization])
         
         total_count = suppliers.count()
-        active_count = suppliers.filter(is_active=True).count()
-        inactive_count = total_count - active_count
         
         # Get category breakdown
         category_stats = {}
@@ -223,8 +220,6 @@ def get_supplier_stats(organization):
         return {
             'success': True,
             'total_suppliers': total_count,
-            'active_suppliers': active_count,
-            'inactive_suppliers': inactive_count,
             'by_category': category_stats
         }
     except Exception as e:

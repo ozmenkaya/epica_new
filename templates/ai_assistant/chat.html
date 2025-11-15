@@ -153,6 +153,20 @@
         transform: translateY(-10px);
     }
 }
+
+.feedback-buttons {
+    margin-top: 0.5rem;
+    text-align: right;
+}
+
+.feedback-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.feedback-btn:disabled {
+    cursor: not-allowed;
+}
 </style>
 
 <script>
@@ -261,7 +275,7 @@ function sendMessage(message) {
         hideTypingIndicator();
         
         if (data.success) {
-            appendMessage('assistant', data.message.content);
+            appendMessage('assistant', data.message.content, data.message.id);
             
             // Show function calls if any
             if (data.message.function_calls && data.message.function_calls.length > 0) {
@@ -294,7 +308,7 @@ function loadConversation(convId) {
         if (data.success) {
             document.getElementById('chatTitle').textContent = data.conversation.title;
             data.messages.forEach(msg => {
-                appendMessage(msg.role, msg.content);
+                appendMessage(msg.role, msg.content, msg.id);
             });
         }
     })
@@ -303,14 +317,31 @@ function loadConversation(convId) {
     });
 }
 
-function appendMessage(role, content) {
+function appendMessage(role, content, messageId = null) {
     const container = document.getElementById('messagesContainer');
     const welcome = document.getElementById('welcomeMessage');
     if (welcome) welcome.remove();
     
     const messageDiv = document.createElement('div');
     messageDiv.className = `message message-${role}`;
-    messageDiv.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
+    
+    let messageHtml = `<div class="message-content">${escapeHtml(content)}</div>`;
+    
+    // Add feedback buttons for assistant messages
+    if (role === 'assistant' && messageId) {
+        messageHtml += `
+            <div class="feedback-buttons mt-2" data-message-id="${messageId}">
+                <button class="btn btn-sm btn-outline-success feedback-btn" data-feedback="positive" title="Yararlı">
+                    <i class="bi bi-hand-thumbs-up"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger feedback-btn ms-1" data-feedback="negative" title="Yararlı değil">
+                    <i class="bi bi-hand-thumbs-down"></i>
+                </button>
+            </div>
+        `;
+    }
+    
+    messageDiv.innerHTML = messageHtml;
     
     container.appendChild(messageDiv);
     container.scrollTop = container.scrollHeight;
@@ -354,6 +385,56 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Feedback submission
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.feedback-btn')) {
+        const btn = e.target.closest('.feedback-btn');
+        const feedbackType = btn.getAttribute('data-feedback');
+        const container = btn.closest('.feedback-buttons');
+        const messageId = container.getAttribute('data-message-id');
+        
+        submitFeedback(messageId, feedbackType, container);
+    }
+});
+
+function submitFeedback(messageId, feedbackType, container) {
+    const url = `{% url "ai_assistant:message_feedback" 0 %}`.replace('0', messageId);
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            feedback: feedbackType
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Disable all buttons and highlight selected
+            container.querySelectorAll('.feedback-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.classList.remove('btn-outline-success', 'btn-outline-danger');
+                
+                if (btn.getAttribute('data-feedback') === feedbackType) {
+                    btn.classList.add(feedbackType === 'positive' ? 'btn-success' : 'btn-danger');
+                } else {
+                    btn.classList.add('btn-secondary');
+                }
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Feedback submission error:', error);
+        alert('Geri bildirim gönderilemedi');
+    });
 }
 </script>
 {% endblock %}
