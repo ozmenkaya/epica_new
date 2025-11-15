@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-15 15:22+0300\n"
+"POT-Creation-Date: 2025-11-15 16:04+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -187,11 +187,11 @@ msgstr ""
 msgid "Alan filtresi için alan adı gereklidir."
 msgstr ""
 
-#: epica/settings.py:141
+#: epica/settings.py:142
 msgid "Türkçe"
 msgstr ""
 
-#: epica/settings.py:142
+#: epica/settings.py:143
 msgid "English"
 msgstr ""
 
@@ -199,7 +199,7 @@ msgstr ""
 msgid "Giriş Yap"
 msgstr ""
 
-#: templates/accounts/login.html:17 templates/base.html:64
+#: templates/accounts/login.html:17 templates/base.html:67
 #: templates/core/home.html:9
 msgid "Giriş"
 msgstr ""
@@ -312,6 +312,62 @@ msgstr ""
 msgid "Kayıt Ol"
 msgstr ""
 
+#: templates/ai_assistant/chat.html:13
+msgid "Sohbetler"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:30
+msgid "Henüz sohbet yok"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:40
+msgid "AI Asistan Neler Yapabilir?"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:42
+msgid "Talep ve tekliflerinizi sorgula"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:43
+msgid "İstatistik ve analiz yap"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:44
+msgid "Talep durumu güncelle"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:45
+msgid "Tedarikçi bilgisi ara"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:55 templates/base.html:50
+msgid "AI Asistan"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:62
+msgid "Merhaba! Size nasıl yardımcı olabilirim?"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:63
+msgid ""
+"Talepler, teklifler, tedarikçiler hakkında soru sorabilir veya işlem "
+"yapabilirsiniz."
+msgstr ""
+
+#: templates/ai_assistant/chat.html:74
+msgid "Mesajınızı yazın..."
+msgstr ""
+
+#: templates/ai_assistant/chat.html:77 templates/core/owner_ticket_form.html:73
+#: templates/core/portal_customer_requests_form.html:72
+msgid "Gönder"
+msgstr ""
+
+#: templates/ai_assistant/chat.html:82
+msgid ""
+"AI asistan beta aşamasındadır. Önemli kararlar için doğrulamayı unutmayın."
+msgstr ""
+
 #: templates/base.html:24
 msgid "Müşteri Portalım"
 msgstr ""
@@ -381,7 +437,7 @@ msgstr ""
 msgid "Ürünler"
 msgstr ""
 
-#: templates/base.html:62
+#: templates/base.html:65
 msgid "Çıkış"
 msgstr ""
 
@@ -1103,11 +1159,6 @@ msgstr ""
 #: templates/core/owner_ticket_form.html:21
 #: templates/core/portal_customer_requests_form.html:20
 msgid "Satır Ekle"
-msgstr ""
-
-#: templates/core/owner_ticket_form.html:73
-#: templates/core/portal_customer_requests_form.html:72
-msgid "Gönder"
 msgstr ""
 
 #: templates/core/owner_ticket_form.html:123

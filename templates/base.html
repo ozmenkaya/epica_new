@@ -46,6 +46,9 @@
                   <li class="nav-item"><a class="nav-link" href="/orders/">{% trans "Siparişler" %}</a></li>
                 {% endif %}
                 <li class="nav-item"><a class="nav-link" href="/suppliers/">{% trans "Tedarikçiler" %}</a></li>
+                {% if tenant_is_owner %}
+                  <li class="nav-item"><a class="nav-link" href="{% url 'ai_assistant:chat' %}"><i class="bi bi-robot"></i> {% trans "AI Asistan" %}</a></li>
+                {% endif %}
               {% endif %}
             {% endif %}
           </ul>

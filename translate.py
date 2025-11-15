@@ -142,6 +142,21 @@ TRANSLATIONS = {
     "Evet, Sil": "Yes, Delete",
     '"{{ label }}" alanını silmek istediğinize emin misiniz?': 'Are you sure you want to delete the "{{ label }}" field?',
     "Konu": "Subject",
+    
+    # AI Assistant
+    "AI Asistan": "AI Assistant",
+    "Sohbetler": "Conversations",
+    "Henüz sohbet yok": "No conversations yet",
+    "AI Asistan Neler Yapabilir?": "What Can AI Assistant Do?",
+    "Talep ve tekliflerinizi sorgula": "Query your requests and quotes",
+    "İstatistik ve analiz yap": "Perform statistics and analysis",
+    "Talep durumu güncelle": "Update request status",
+    "Tedarikçi bilgisi ara": "Search supplier information",
+    "Merhaba! Size nasıl yardımcı olabilirim?": "Hello! How can I help you?",
+    "Talepler, teklifler, tedarikçiler hakkında soru sorabilir veya işlem yapabilirsiniz.": "You can ask questions or perform actions about requests, quotes, and suppliers.",
+    "Mesajınızı yazın...": "Type your message...",
+    "Gönder": "Send",
+    "AI asistan beta aşamasındadır. Önemli kararlar için doğrulamayı unutmayın.": "AI assistant is in beta. Please verify important decisions.",
     "Henüz kural yok.": "No rules yet.",
     "ve": "and",
     

@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'core',
     'accounts',
     'billing',
+    'ai_assistant',
 ]
 
 MIDDLEWARE = [
@@ -324,9 +325,19 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'ai_assistant': {
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
     'root': {
         'handlers': ['console', 'file'],
         'level': 'INFO',
     },
 }
+
+# OpenAI Configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")  # Cost-effective model
+OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")

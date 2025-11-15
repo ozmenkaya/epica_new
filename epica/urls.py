@@ -31,6 +31,7 @@ urlpatterns += i18n_patterns(
     path('', include('core.urls')),
     path('accounts/', include('accounts.urls')),
     path('billing/', include('billing.urls')),
+    path('ai/', include('ai_assistant.urls')),
 )
 
 if settings.DEBUG:

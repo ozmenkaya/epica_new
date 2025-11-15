@@ -41,3 +41,5 @@ virtualenv==20.34.0
 weasyprint==66.0
 whitenoise==6.9.0
 xhtml2pdf==0.2.15
+openai==1.58.1
+numpy==1.26.4
