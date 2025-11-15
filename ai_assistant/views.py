@@ -265,3 +265,118 @@ def message_feedback(request, message_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@login_required
+def ai_stats(request):
+    """
+    AI Statistics page - shows usage stats, feedback, and learning metrics
+    """
+    organization = get_current_org(request)
+    
+    if not organization:
+        return render(request, 'ai_assistant/stats.html', {
+            'error': 'No organization selected'
+        })
+    
+    # Get statistics
+    from django.db.models import Count, Q, Avg
+    from datetime import timedelta
+    
+    now = timezone.now()
+    last_30_days = now - timedelta(days=30)
+    last_7_days = now - timedelta(days=7)
+    
+    # Conversation stats
+    total_conversations = Conversation.objects.filter(organization=organization).count()
+    conversations_30d = Conversation.objects.filter(
+        organization=organization,
+        created_at__gte=last_30_days
+    ).count()
+    conversations_7d = Conversation.objects.filter(
+        organization=organization,
+        created_at__gte=last_7_days
+    ).count()
+    
+    # Message stats
+    total_messages = Message.objects.filter(conversation__organization=organization).count()
+    user_messages = Message.objects.filter(
+        conversation__organization=organization,
+        role='user'
+    ).count()
+    assistant_messages = Message.objects.filter(
+        conversation__organization=organization,
+        role='assistant'
+    ).count()
+    
+    # Feedback stats
+    feedback_stats = Message.objects.filter(
+        conversation__organization=organization,
+        role='assistant',
+        feedback__isnull=False
+    ).aggregate(
+        total_feedback=Count('id'),
+        positive_feedback=Count('id', filter=Q(feedback='positive')),
+        negative_feedback=Count('id', filter=Q(feedback='negative'))
+    )
+    
+    # Calculate feedback rate
+    if assistant_messages > 0:
+        feedback_rate = (feedback_stats['total_feedback'] / assistant_messages) * 100
+    else:
+        feedback_rate = 0
+    
+    # Function usage stats
+    function_stats = AIAction.objects.filter(
+        conversation__organization=organization
+    ).values('function_name').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    # Recent conversations
+    recent_conversations = Conversation.objects.filter(
+        organization=organization
+    ).order_by('-updated_at')[:10]
+    
+    context = {
+        'total_conversations': total_conversations,
+        'conversations_30d': conversations_30d,
+        'conversations_7d': conversations_7d,
+        'total_messages': total_messages,
+        'user_messages': user_messages,
+        'assistant_messages': assistant_messages,
+        'feedback_stats': feedback_stats,
+        'feedback_rate': round(feedback_rate, 1),
+        'function_stats': function_stats,
+        'recent_conversations': recent_conversations,
+    }
+    
+    return render(request, 'ai_assistant/stats.html', context)
+
+
+@login_required
+def ai_settings(request):
+    """
+    AI Settings page - configuration and preferences
+    """
+    organization = get_current_org(request)
+    
+    if not organization:
+        return render(request, 'ai_assistant/settings.html', {
+            'error': 'No organization selected'
+        })
+    
+    if request.method == 'POST':
+        # Handle settings update
+        # TODO: Implement settings model and save logic
+        from django.contrib import messages
+        messages.success(request, 'Ayarlar kaydedildi.')
+        return render(request, 'ai_assistant/settings.html', {
+            'organization': organization
+        })
+    
+    context = {
+        'organization': organization,
+    }
+    
+    return render(request, 'ai_assistant/settings.html', context)

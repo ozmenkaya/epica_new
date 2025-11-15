@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "AI İstatistikler" %} - Epica{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-graph-up text-primary"></i> {% trans "AI İstatistikler" %}</h1>
+            <a href="{% url 'ai_assistant:chat' %}" class="btn btn-primary">
+                <i class="bi bi-robot"></i> {% trans "AI Asistan'a Dön" %}
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% else %}
+
+<!-- Overview Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">{% trans "Toplam Sohbet" %}</h6>
+                        <h2 class="mb-0">{{ total_conversations }}</h2>
+                    </div>
+                    <i class="bi bi-chat-dots text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <div class="mt-2 small text-muted">
+                    <i class="bi bi-calendar-week"></i> 7 gün: {{ conversations_7d }}
+                    <br>
+                    <i class="bi bi-calendar-month"></i> 30 gün: {{ conversations_30d }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">{% trans "Toplam Mesaj" %}</h6>
+                        <h2 class="mb-0">{{ total_messages }}</h2>
+                    </div>
+                    <i class="bi bi-envelope text-success" style="font-size: 2rem;"></i>
+                </div>
+                <div class="mt-2 small text-muted">
+                    <i class="bi bi-person"></i> Kullanıcı: {{ user_messages }}
+                    <br>
+                    <i class="bi bi-robot"></i> AI: {{ assistant_messages }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">{% trans "Geri Bildirim" %}</h6>
+                        <h2 class="mb-0">{{ feedback_stats.total_feedback }}</h2>
+                    </div>
+                    <i class="bi bi-hand-thumbs-up text-info" style="font-size: 2rem;"></i>
+                </div>
+                <div class="mt-2 small text-muted">
+                    <span class="text-success"><i class="bi bi-hand-thumbs-up-fill"></i> {{ feedback_stats.positive_feedback }}</span>
+                    <span class="ms-2 text-danger"><i class="bi bi-hand-thumbs-down-fill"></i> {{ feedback_stats.negative_feedback }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">{% trans "Geri Bildirim Oranı" %}</h6>
+                        <h2 class="mb-0">{{ feedback_rate }}%</h2>
+                    </div>
+                    <i class="bi bi-percent text-warning" style="font-size: 2rem;"></i>
+                </div>
+                <div class="mt-2 small text-muted">
+                    {{ feedback_stats.total_feedback }} / {{ assistant_messages }} mesaj
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Function Usage -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-gear-fill"></i> {% trans "En Çok Kullanılan Fonksiyonlar" %}</h5>
+            </div>
+            <div class="card-body">
+                {% if function_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Fonksiyon" %}</th>
+                                <th class="text-end">{% trans "Kullanım" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for func in function_stats %}
+                            <tr>
+                                <td>
+                                    <code class="text-primary">{{ func.function_name }}</code>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge bg-primary">{{ func.count }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">
+                    <i class="bi bi-info-circle"></i> {% trans "Henüz fonksiyon kullanımı yok" %}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> {% trans "Son Sohbetler" %}</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_conversations %}
+                <div class="list-group list-group-flush">
+                    {% for conv in recent_conversations %}
+                    <a href="{% url 'ai_assistant:chat' %}?conversation={{ conv.id }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ conv.title }}</h6>
+                            <small class="text-muted">{{ conv.updated_at|timesince }}</small>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ conv.user.username }}
+                            <span class="ms-2">
+                                <i class="bi bi-chat-dots"></i> {{ conv.messages.count }} mesaj
+                            </span>
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">
+                    <i class="bi bi-info-circle"></i> {% trans "Henüz sohbet yok" %}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Learning Progress -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-lightbulb-fill"></i> {% trans "Öğrenme Durumu" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>{% trans "Başarı Oranı" %}</h6>
+                        {% if feedback_stats.total_feedback > 0 %}
+                        {% widthratio feedback_stats.positive_feedback feedback_stats.total_feedback 100 as success_rate %}
+                        <div class="progress mb-2" style="height: 30px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ success_rate }}%;" aria-valuenow="{{ success_rate }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ success_rate }}%
+                            </div>
+                        </div>
+                        <p class="text-muted small">
+                            {{ feedback_stats.positive_feedback }} pozitif / {{ feedback_stats.total_feedback }} toplam geri bildirim
+                        </p>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> {% trans "Henüz geri bildirim yok. Kullanıcılar AI cevaplarını beğenip beğenmediğini belirtince burada görünecek." %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <h6>{% trans "Aktivite" %}</h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>{% trans "Bu hafta" %}</span>
+                            <strong>{{ conversations_7d }} sohbet</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>{% trans "Bu ay" %}</span>
+                            <strong>{{ conversations_30d }} sohbet</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>{% trans "Toplam" %}</span>
+                            <strong>{{ total_conversations }} sohbet</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <h6>{% trans "Öneriler" %}</h6>
+                        <ul class="list-unstyled">
+                            {% if feedback_rate < 10 %}
+                            <li class="mb-2">
+                                <i class="bi bi-exclamation-triangle text-warning"></i>
+                                {% trans "Daha fazla geri bildirim toplayın" %}
+                            </li>
+                            {% endif %}
+                            {% if conversations_7d < 5 %}
+                            <li class="mb-2">
+                                <i class="bi bi-info-circle text-info"></i>
+                                {% trans "AI'yi daha sık kullanın" %}
+                            </li>
+                            {% endif %}
+                            {% if feedback_stats.positive_feedback > 0 %}
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle text-success"></i>
+                                {% trans "AI iyi performans gösteriyor!" %}
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}

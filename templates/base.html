@@ -48,6 +48,15 @@
                 <li class="nav-item"><a class="nav-link" href="/suppliers/">{% trans "Tedarikçiler" %}</a></li>
                 {% if tenant_is_owner %}
                   <li class="nav-item"><a class="nav-link" href="{% url 'ai_assistant:chat' %}"><i class="bi bi-robot"></i> {% trans "AI Asistan" %}</a></li>
+                  <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="settingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="bi bi-gear-fill"></i> {% trans "Ayarlar" %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown">
+                      <li><a class="dropdown-item" href="{% url 'ai_assistant:stats' %}"><i class="bi bi-graph-up"></i> {% trans "AI İstatistikler" %}</a></li>
+                      <li><a class="dropdown-item" href="{% url 'ai_assistant:settings' %}"><i class="bi bi-sliders"></i> {% trans "AI Ayarlar" %}</a></li>
+                    </ul>
+                  </li>
                 {% endif %}
               {% endif %}
             {% endif %}

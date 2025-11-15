@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "AI Ayarlar" %} - Epica{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-sliders text-primary"></i> {% trans "AI Ayarlar" %}</h1>
+            <a href="{% url 'ai_assistant:chat' %}" class="btn btn-primary">
+                <i class="bi bi-robot"></i> {% trans "AI Asistan'a Dön" %}
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% else %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-gear-fill"></i> {% trans "Genel Ayarlar" %}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="aiModel" class="form-label">{% trans "AI Modeli" %}</label>
+                        <select class="form-select" id="aiModel" name="ai_model" disabled>
+                            <option value="gpt-4o-mini" selected>GPT-4o-mini (OpenAI)</option>
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i> {% trans "Şu anda GPT-4o-mini kullanılıyor. Hızlı ve maliyet verimli." %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="temperature" class="form-label">
+                            {% trans "Sıcaklık (Creativity)" %}: <strong>0.7</strong>
+                        </label>
+                        <input type="range" class="form-range" min="0" max="1" step="0.1" value="0.7" id="temperature" name="temperature" disabled>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i> {% trans "Düşük değer: Daha tutarlı. Yüksek değer: Daha yaratıcı." %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="maxTokens" class="form-label">{% trans "Maksimum Cevap Uzunluğu" %}</label>
+                        <input type="number" class="form-control" id="maxTokens" name="max_tokens" value="1500" disabled>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i> {% trans "AI'nin verebileceği maksimum kelime sayısı (token)." %}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="mb-3"><i class="bi bi-lightbulb"></i> {% trans "Öğrenme Ayarları" %}</h6>
+                    
+                    <div class="mb-3 form-check">
+                        <input class="form-check-input" type="checkbox" id="collectFeedback" name="collect_feedback" checked disabled>
+                        <label class="form-check-label" for="collectFeedback">
+                            {% trans "Geri bildirim topla (thumbs up/down)" %}
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input class="form-check-input" type="checkbox" id="autoLearn" name="auto_learn" checked disabled>
+                        <label class="form-check-label" for="autoLearn">
+                            {% trans "Pozitif geri bildirimlerden otomatik öğren" %}
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input class="form-check-input" type="checkbox" id="languageDetection" name="language_detection" checked disabled>
+                        <label class="form-check-label" for="languageDetection">
+                            {% trans "Otomatik dil algılama (TR/EN)" %}
+                        </label>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        {% trans "Bu ayarlar şu anda sistem tarafından otomatik yönetiliyor. İleri düzey ayarlar için admin panelini kullanın." %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" disabled>
+                        <i class="bi bi-save"></i> {% trans "Ayarları Kaydet" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> {% trans "Aktif Özellikler" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <strong>{% trans "Function Calling" %}</strong>
+                        <p class="mb-0 small text-muted">9 aktif fonksiyon</p>
+                    </div>
+                    <div class="list-group-item">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <strong>{% trans "Dil Algılama" %}</strong>
+                        <p class="mb-0 small text-muted">TR/EN otomatik</p>
+                    </div>
+                    <div class="list-group-item">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <strong>{% trans "Geri Bildirim" %}</strong>
+                        <p class="mb-0 small text-muted">Thumbs up/down</p>
+                    </div>
+                    <div class="list-group-item">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <strong>{% trans "Direkt Linkler" %}</strong>
+                        <p class="mb-0 small text-muted">Tıklanabilir URL'ler</p>
+                    </div>
+                    <div class="list-group-item">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <strong>{% trans "Kategori Arama" %}</strong>
+                        <p class="mb-0 small text-muted">Ürün ve kategori</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> {% trans "Fonksiyonlar" %}</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">{% trans "AI asistan şu fonksiyonları kullanabilir:" %}</p>
+                <ul class="list-unstyled small">
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>search_tickets</code></li>
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>get_ticket_stats</code></li>
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>update_ticket_status</code></li>
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>search_suppliers</code></li>
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>get_supplier_stats</code></li>
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>get_quote_stats</code></li>
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>search_customer_orders</code></li>
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>search_product_orders</code></li>
+                    <li><i class="bi bi-arrow-right text-primary"></i> <code>get_order_stats</code></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
