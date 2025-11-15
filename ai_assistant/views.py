@@ -28,6 +28,12 @@ def chat_view(request):
     """
     organization = get_current_org(request)
     
+    if not organization:
+        return JsonResponse({
+            'success': False,
+            'error': 'No organization selected. Please select an organization first.'
+        }, status=400)
+    
     if request.method == "POST":
         # Create new conversation
         conversation = Conversation.objects.create(

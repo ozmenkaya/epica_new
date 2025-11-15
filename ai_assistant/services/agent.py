@@ -132,6 +132,29 @@ Be helpful, professional, and accurate."""
                     },
                     "required": ["query"]
                 }
+            },
+            {
+                "name": "get_supplier_stats",
+                "description": "Get statistics about suppliers (total count, active/inactive, categories)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
+            {
+                "name": "get_quote_stats",
+                "description": "Get statistics about quotes (counts by supplier, time period)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "period": {
+                            "type": "string",
+                            "enum": ["today", "week", "month", "year", "all"],
+                            "description": "Time period for statistics"
+                        }
+                    },
+                    "required": ["period"]
+                }
             }
         ]
     
@@ -155,6 +178,10 @@ Be helpful, professional, and accurate."""
                 return actions.update_ticket_status(self.organization, self.user, **arguments)
             elif function_name == "search_suppliers":
                 return actions.search_suppliers(self.organization, **arguments)
+            elif function_name == "get_supplier_stats":
+                return actions.get_supplier_stats(self.organization)
+            elif function_name == "get_quote_stats":
+                return actions.get_quote_stats(self.organization, **arguments)
             else:
                 return {"error": f"Unknown function: {function_name}"}
         except Exception as e:

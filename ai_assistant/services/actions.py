@@ -192,3 +192,91 @@ def search_suppliers(organization, query: str):
     except Exception as e:
         logger.error(f"Error in search_suppliers: {e}")
         return {'success': False, 'error': str(e)}
+
+
+def get_supplier_stats(organization):
+    """
+    Get supplier statistics for organization
+    
+    Args:
+        organization: Organization instance
+        
+    Returns:
+        Dict with statistics
+    """
+    try:
+        suppliers = Supplier.objects.filter(organization=organization)
+        
+        total_count = suppliers.count()
+        active_count = suppliers.filter(is_active=True).count()
+        inactive_count = total_count - active_count
+        
+        # Get category breakdown
+        category_stats = {}
+        for supplier in suppliers:
+            for category in supplier.categories.all():
+                if category.name in category_stats:
+                    category_stats[category.name] += 1
+                else:
+                    category_stats[category.name] = 1
+        
+        return {
+            'success': True,
+            'total_suppliers': total_count,
+            'active_suppliers': active_count,
+            'inactive_suppliers': inactive_count,
+            'by_category': category_stats
+        }
+    except Exception as e:
+        logger.error(f"Error in get_supplier_stats: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def get_quote_stats(organization, period: str = 'month'):
+    """
+    Get quote statistics for organization
+    
+    Args:
+        organization: Organization instance
+        period: Time period ('today', 'week', 'month', 'year', 'all')
+        
+    Returns:
+        Dict with statistics
+    """
+    try:
+        # Calculate date range
+        now = timezone.now()
+        if period == 'today':
+            start_date = now.replace(hour=0, minute=0, second=0)
+        elif period == 'week':
+            start_date = now - timedelta(days=7)
+        elif period == 'month':
+            start_date = now - timedelta(days=30)
+        elif period == 'year':
+            start_date = now - timedelta(days=365)
+        else:  # all
+            start_date = None
+        
+        # Base queryset
+        quotes = Quote.objects.filter(ticket__organization=organization)
+        if start_date:
+            quotes = quotes.filter(created_at__gte=start_date)
+        
+        # Calculate stats
+        total_count = quotes.count()
+        
+        # Get supplier breakdown
+        supplier_breakdown = quotes.values('supplier__name').annotate(count=Count('id')).order_by('-count')[:5]
+        
+        return {
+            'success': True,
+            'period': period,
+            'total_quotes': total_count,
+            'top_suppliers': [
+                {'supplier': item['supplier__name'], 'count': item['count']}
+                for item in supplier_breakdown
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error in get_quote_stats: {e}")
+        return {'success': False, 'error': str(e)}
