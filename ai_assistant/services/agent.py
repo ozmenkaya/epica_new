@@ -179,13 +179,13 @@ Be helpful, professional, and accurate."""
             },
             {
                 "name": "search_product_orders",
-                "description": "Search orders by product name or description. Use this to find orders containing specific products (e.g. 'flat sap çanta', 'karton kutu', etc.) and see quantities, customers, and totals.",
+                "description": "Search orders by product name, description, or category name. Use this to find orders containing specific products (e.g. 'flat sap çanta', 'karton kutu') or in specific categories (e.g. 'Flat Sap Çanta', 'Karton Kutu'). Returns quantities, customers, and totals.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "product_query": {
                             "type": "string",
-                            "description": "Product name or description to search for (e.g. 'flat sap çanta', 'karton kutu')"
+                            "description": "Product name, description, or category name to search for (e.g. 'flat sap çanta', 'karton kutu', 'Flat Sap Çanta')"
                         }
                     },
                     "required": ["product_query"]

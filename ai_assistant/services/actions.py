@@ -333,11 +333,11 @@ def search_customer_orders(organization, customer_name: str):
 
 def search_product_orders(organization, product_query: str):
     """
-    Search orders by product name or description
+    Search orders by product name, description, or category name
     
     Args:
         organization: Organization instance
-        product_query: Product name or description to search for
+        product_query: Product name, description, or category name to search for
         
     Returns:
         Dict with order results
@@ -346,11 +346,13 @@ def search_product_orders(organization, product_query: str):
         # Import OrderItem here to avoid circular imports
         from billing.models import OrderItem
         
-        # Search for order items matching the product query
+        # Search for order items matching the product query in description OR category name
         order_items = OrderItem.objects.filter(
-            order__organization=organization,
-            description__icontains=product_query
-        ).select_related('order', 'order__ticket__customer', 'order__supplier').order_by('-order__created_at')[:50]
+            order__organization=organization
+        ).filter(
+            Q(description__icontains=product_query) | 
+            Q(order__ticket__category__name__icontains=product_query)
+        ).select_related('order', 'order__ticket__customer', 'order__ticket__category', 'order__supplier').order_by('-order__created_at')[:50]
         
         # Group by order and calculate totals
         orders_dict = {}
@@ -361,6 +363,7 @@ def search_product_orders(organization, product_query: str):
                 orders_dict[order.id] = {
                     'order_id': order.id,
                     'ticket_id': order.ticket_id,
+                    'category': order.ticket.category.name if order.ticket.category else 'N/A',
                     'customer_email': customer.email or '',
                     'customer_name': customer.name,
                     'customer_phone': customer.phone or '',
