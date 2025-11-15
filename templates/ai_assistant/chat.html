@@ -16,17 +16,32 @@
                     </button>
                 </div>
                 <div class="card-body p-0">
+                    <!-- Search Box -->
+                    <div class="p-2 border-bottom">
+                        <input type="text" 
+                               class="form-control form-control-sm" 
+                               id="searchConversations" 
+                               placeholder="{% trans 'Sohbetlerde ara...' %}">
+                    </div>
                     <div class="list-group list-group-flush" id="conversationsList">
                         {% for conv in conversations %}
-                        <a href="#" class="list-group-item list-group-item-action conversation-item" 
-                           data-conversation-id="{{ conv.id }}">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">{{ conv.title|truncatechars:30 }}</h6>
-                                <small>{{ conv.updated_at|date:"d M" }}</small>
-                            </div>
-                        </a>
+                        <div class="list-group-item list-group-item-action conversation-item d-flex justify-content-between align-items-center" 
+                             data-conversation-id="{{ conv.id }}"
+                             data-title="{{ conv.title|lower }}">
+                            <a href="#" class="flex-grow-1 text-decoration-none text-dark conversation-link">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ conv.title|truncatechars:30 }}</h6>
+                                    <small>{{ conv.updated_at|date:"d M" }}</small>
+                                </div>
+                            </a>
+                            <button class="btn btn-sm btn-link text-danger delete-conversation-btn" 
+                                    data-conversation-id="{{ conv.id }}"
+                                    title="{% trans 'Sil' %}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                         {% empty %}
-                        <div class="p-3 text-muted text-center">
+                        <div class="p-3 text-muted text-center" id="noConversationsMsg">
                             {% trans "Henüz sohbet yok" %}
                         </div>
                         {% endfor %}
@@ -167,6 +182,75 @@
 .feedback-btn:disabled {
     cursor: not-allowed;
 }
+
+#searchConversations {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+#searchConversations:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.conversation-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.conversation-link {
+    flex: 1;
+    text-decoration: none;
+    color: inherit;
+}
+
+.delete-conversation-btn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 1rem;
+}
+
+.conversation-item:hover .delete-conversation-btn {
+    opacity: 1;
+}
+
+.delete-conversation-btn:hover {
+    color: #bd2130;
+    background-color: rgba(220, 53, 69, 0.1);
+    border-radius: 0.25rem;
+}
+
+.conversation-item:hover {
+    background-color: #f8f9fa;
+}
+
+.conversation-item.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.conversation-item.active .delete-conversation-btn {
+    color: white;
+}
+
+.conversation-item.active .delete-conversation-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
 </style>
 
 <script>
@@ -198,16 +282,102 @@ document.getElementById('newChatBtn').addEventListener('click', function() {
     });
 });
 
-// Load conversation
-document.querySelectorAll('.conversation-item').forEach(item => {
-    item.addEventListener('click', function(e) {
+// Search conversations
+document.getElementById('searchConversations').addEventListener('input', function(e) {
+    const searchQuery = e.target.value.toLowerCase().trim();
+    const conversations = document.querySelectorAll('.conversation-item');
+    let visibleCount = 0;
+    
+    conversations.forEach(item => {
+        const title = item.dataset.title || '';
+        if (title.includes(searchQuery)) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Show/hide "no results" message
+    let noResults = document.getElementById('noSearchResults');
+    if (visibleCount === 0 && searchQuery !== '') {
+        if (!noResults) {
+            noResults = document.createElement('div');
+            noResults.id = 'noSearchResults';
+            noResults.className = 'text-muted text-center py-3';
+            noResults.textContent = 'Sonuç bulunamadı';
+            document.querySelector('.conversations-list').appendChild(noResults);
+        }
+        noResults.style.display = 'block';
+    } else if (noResults) {
+        noResults.style.display = 'none';
+    }
+});
+
+// Delete conversation
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.delete-conversation-btn')) {
+        e.stopPropagation();
         e.preventDefault();
-        const convId = this.dataset.conversationId;
+        
+        const btn = e.target.closest('.delete-conversation-btn');
+        const convId = btn.dataset.conversationId;
+        const conversationItem = btn.closest('.conversation-item');
+        
+        if (confirm('Bu sohbeti silmek istediğinizden emin misiniz?')) {
+            const url = `{% url "ai_assistant:delete_conversation" 0 %}`.replace('0', convId);
+            fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Remove from DOM
+                    conversationItem.remove();
+                    
+                    // If this was the active conversation, clear chat
+                    if (currentConversationId == convId) {
+                        currentConversationId = null;
+                        document.getElementById('messagesContainer').innerHTML = '<div class="text-muted text-center py-5">Sohbet seçin veya yeni bir sohbet başlatın</div>';
+                        document.querySelectorAll('.conversation-item').forEach(el => el.classList.remove('active'));
+                    }
+                    
+                    // Show success message briefly
+                    const container = document.getElementById('messagesContainer');
+                    const notice = document.createElement('div');
+                    notice.className = 'alert alert-success alert-dismissible fade show';
+                    notice.innerHTML = '<i class="bi bi-check-circle me-2"></i>Sohbet silindi';
+                    container.insertBefore(notice, container.firstChild);
+                    setTimeout(() => notice.remove(), 3000);
+                } else {
+                    alert('Sohbet silinirken bir hata oluştu');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting conversation:', error);
+                alert('Sohbet silinirken bir hata oluştu');
+            });
+        }
+    }
+});
+
+// Load conversation
+document.querySelectorAll('.conversation-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const item = this.closest('.conversation-item');
+        const convId = item.dataset.conversationId;
         loadConversation(convId);
         
         // Mark as active
         document.querySelectorAll('.conversation-item').forEach(el => el.classList.remove('active'));
-        this.classList.add('active');
+        item.classList.add('active');
     });
 });
 
