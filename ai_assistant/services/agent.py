@@ -178,6 +178,20 @@ Be helpful, professional, and accurate."""
                 }
             },
             {
+                "name": "search_product_orders",
+                "description": "Search orders by product name or description. Use this to find orders containing specific products (e.g. 'flat sap çanta', 'karton kutu', etc.) and see quantities, customers, and totals.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "product_query": {
+                            "type": "string",
+                            "description": "Product name or description to search for (e.g. 'flat sap çanta', 'karton kutu')"
+                        }
+                    },
+                    "required": ["product_query"]
+                }
+            },
+            {
                 "name": "get_order_stats",
                 "description": "Get order statistics (total orders, amounts, top customers, status breakdown)",
                 "parameters": {
@@ -220,6 +234,8 @@ Be helpful, professional, and accurate."""
                 return actions.get_quote_stats(self.organization, **arguments)
             elif function_name == "search_customer_orders":
                 return actions.search_customer_orders(self.organization, **arguments)
+            elif function_name == "search_product_orders":
+                return actions.search_product_orders(self.organization, **arguments)
             elif function_name == "get_order_stats":
                 return actions.get_order_stats(self.organization, **arguments)
             else:

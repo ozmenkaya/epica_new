@@ -331,6 +331,75 @@ def search_customer_orders(organization, customer_name: str):
         return {'success': False, 'error': str(e)}
 
 
+def search_product_orders(organization, product_query: str):
+    """
+    Search orders by product name or description
+    
+    Args:
+        organization: Organization instance
+        product_query: Product name or description to search for
+        
+    Returns:
+        Dict with order results
+    """
+    try:
+        # Import OrderItem here to avoid circular imports
+        from billing.models import OrderItem
+        
+        # Search for order items matching the product query
+        order_items = OrderItem.objects.filter(
+            order__organization=organization,
+            description__icontains=product_query
+        ).select_related('order', 'order__ticket__customer', 'order__supplier').order_by('-order__created_at')[:50]
+        
+        # Group by order and calculate totals
+        orders_dict = {}
+        for item in order_items:
+            order = item.order
+            if order.id not in orders_dict:
+                customer = order.ticket.customer
+                orders_dict[order.id] = {
+                    'order_id': order.id,
+                    'ticket_id': order.ticket_id,
+                    'customer_email': customer.email or '',
+                    'customer_name': customer.name,
+                    'customer_phone': customer.phone or '',
+                    'supplier': order.supplier.name if order.supplier else 'N/A',
+                    'status': order.status,
+                    'total': float(order.total),
+                    'currency': order.currency,
+                    'created_at': order.created_at.isoformat(),
+                    'items': []
+                }
+            
+            # Add item details
+            orders_dict[order.id]['items'].append({
+                'description': item.description,
+                'quantity': item.quantity,
+                'unit_price': float(item.supplier_unit_price),
+                'sell_total': float(item.sell_total)
+            })
+        
+        results = list(orders_dict.values())
+        total_amount = sum(order['total'] for order in results)
+        total_quantity = sum(
+            sum(item['quantity'] for item in order['items'])
+            for order in results
+        )
+        
+        return {
+            'success': True,
+            'product_query': product_query,
+            'order_count': len(results),
+            'total_quantity': total_quantity,
+            'total_amount': float(total_amount),
+            'orders': results
+        }
+    except Exception as e:
+        logger.error(f"Error in search_product_orders: {e}")
+        return {'success': False, 'error': str(e)}
+
+
 def get_order_stats(organization, period: str = 'month'):
     """
     Get order statistics for organization
