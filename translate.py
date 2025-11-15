@@ -138,6 +138,9 @@ TRANSLATIONS = {
     "Alan filtresi için alan adı gereklidir.": "Field name is required for field filter.",
     "En az adet, en çok adetten büyük olamaz.": "Minimum quantity cannot be greater than maximum quantity.",
     "Alan anahtarları": "Field keys",
+    "Alanı Sil": "Delete Field",
+    "Evet, Sil": "Yes, Delete",
+    "\"{{ label }}\" alanını silmek istediğinize emin misiniz?": "Are you sure you want to delete the \"{{ label }}\" field?",
     "Henüz kural yok.": "No rules yet.",
     "ve": "and",
     

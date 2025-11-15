@@ -1,15 +1,16 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
 <div class="card shadow-sm">
   <div class="card-header">
-    <h5 class="mb-0">Alanı Sil</h5>
+    <h5 class="mb-0">{% trans "Alanı Sil" %}</h5>
   </div>
   <div class="card-body">
-    <p>"{{ obj.label }}" alanını silmek istediğinize emin misiniz?</p>
+    <p>{% blocktrans with label=obj.label %}"{{ label }}" alanını silmek istediğinize emin misiniz?{% endblocktrans %}</p>
     <form method="post">
       {% csrf_token %}
-      <button class="btn btn-danger" type="submit">Evet, Sil</button>
-      <a class="btn btn-outline-secondary" href="{% url 'category_form_fields_list' category.id %}">Vazgeç</a>
+      <button class="btn btn-danger" type="submit">{% trans "Evet, Sil" %}</button>
+      <a class="btn btn-outline-secondary" href="{% url 'category_form_fields_list' category.id %}">{% trans "Vazgeç" %}</a>
     </form>
   </div>
 </div>

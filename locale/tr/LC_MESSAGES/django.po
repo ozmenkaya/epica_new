@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-15 14:56+0300\n"
+"POT-Creation-Date: 2025-11-15 15:08+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -436,6 +436,7 @@ msgid "Boş bırakırsanız ana kategori olur"
 msgstr ""
 
 #: templates/core/categories_form.html:35
+#: templates/core/category_form_fields_confirm_delete.html:13
 #: templates/core/category_rules_confirm_delete.html:13
 #: templates/core/customers_confirm_delete.html:9
 #: templates/core/portal_customer_requests_confirm_delete.html:9
@@ -459,6 +460,20 @@ msgstr ""
 
 #: templates/core/categories_list.html:43
 msgid "Henüz kategori yok."
+msgstr ""
+
+#: templates/core/category_form_fields_confirm_delete.html:6
+msgid "Alanı Sil"
+msgstr ""
+
+#: templates/core/category_form_fields_confirm_delete.html:9
+#, python-format
+msgid "\"%(label)s\" alanını silmek istediğinize emin misiniz?"
+msgstr ""
+
+#: templates/core/category_form_fields_confirm_delete.html:12
+#: templates/core/category_rules_confirm_delete.html:12
+msgid "Evet, Sil"
 msgstr ""
 
 #: templates/core/category_form_fields_form.html:7
@@ -510,10 +525,6 @@ msgstr ""
 #, python-format
 msgid ""
 "<strong>%(obj.label)s</strong> kuralını silmek istediğinizden emin misiniz?"
-msgstr ""
-
-#: templates/core/category_rules_confirm_delete.html:12
-msgid "Evet, Sil"
 msgstr ""
 
 #: templates/core/category_rules_form.html:6
