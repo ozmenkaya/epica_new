@@ -353,10 +353,13 @@
 			<div class="star-rating d-flex justify-content-center gap-2">
 				{% for i in "12345" %}
 				<label class="star-label" data-value="{{ i }}">
-					<input type="radio" name="rating" value="{{ i }}" required style="display: none;">
+					<input type="radio" name="rating" value="{{ i }}" style="display: none;">
 					<i class="bi bi-star" style="font-size: 3.5rem; cursor: pointer; color: #c4c4c4;"></i>
 				</label>
 				{% endfor %}
+			</div>
+			<div class="invalid-feedback d-none text-center mt-2" id="rating-error">
+				{% trans "Lütfen bir puan seçin" %}
 			</div>
 		</div>
 	</div>					<div class="mb-3">
@@ -396,12 +399,20 @@
 .star-rating-container {
 	box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
 }
+.invalid-feedback.d-block {
+	display: block !important;
+	color: #dc3545;
+	font-size: 0.875rem;
+	font-weight: 500;
+}
 </style>
 
 <script>
 // Interactive star rating
 document.addEventListener('DOMContentLoaded', function() {
 	const stars = document.querySelectorAll('.star-rating .star-label');
+	const ratingError = document.getElementById('rating-error');
+	const reviewForm = document.getElementById('ownerReviewForm');
 	let selectedRating = 0;
 	
 	stars.forEach((star, index) => {
@@ -413,6 +424,10 @@ document.addEventListener('DOMContentLoaded', function() {
 			selectedRating = index + 1;
 			input.checked = true;
 			updateStars();
+			// Hide error when rating is selected
+			if(ratingError) {
+				ratingError.classList.add('d-none');
+			}
 		});
 		
 		// Hover effect
@@ -428,6 +443,22 @@ document.addEventListener('DOMContentLoaded', function() {
 	document.querySelector('.star-rating').addEventListener('mouseleave', function() {
 		updateStars();
 	});
+	
+	// Form validation
+	if(reviewForm) {
+		reviewForm.addEventListener('submit', function(e) {
+			if(selectedRating === 0) {
+				e.preventDefault();
+				if(ratingError) {
+					ratingError.classList.remove('d-none');
+					ratingError.classList.add('d-block');
+				}
+				// Scroll to rating section
+				document.querySelector('.star-rating-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+				return false;
+			}
+		});
+	}
 	
 	function updateStars() {
 		stars.forEach((star, index) => {
