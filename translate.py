@@ -104,6 +104,22 @@ TRANSLATIONS = {
     "Teslimat Adresi": "Delivery Address",
     "Fatura Adresi": "Billing Address",
     
+    # Form Field Types
+    "Etiket": "Label",
+    "Alan Adı": "Field Name",
+    "Alan Tipi": "Field Type",
+    "Metin": "Text",
+    "Seçim (Dropdown)": "Select (Dropdown)",
+    "Seçenekler": "Options",
+    "Zorunlu": "Required",
+    "Sıra": "Order",
+    "Yardım Metni": "Help Text",
+    "Alan Tanımı": "Field Definition",
+    "Veri anahtarı (otomatik üretilebilir)": "Data key (can be auto-generated)",
+    "Select için seçenekleri satır satır yazın": "Write options line by line for Select",
+    "- Alan seçin -": "- Select field -",
+    "Miktar (form-0-quantity)": "Quantity (form-0-quantity)",
+    
     # Status & Messages
     "Bekliyor": "Pending",
     "Onaylandı": "Approved",

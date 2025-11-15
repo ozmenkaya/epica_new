@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-15 14:04+0300\n"
+"POT-Creation-Date: 2025-11-15 14:40+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,52 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: core/models.py:276
+msgid "Metin"
+msgstr ""
+
+#: core/models.py:277
+msgid "Seçim (Dropdown)"
+msgstr ""
+
+#: core/models.py:281 templates/core/category_form_fields_list.html:15
+#: templates/core/category_rules_list.html:18
+msgid "Etiket"
+msgstr ""
+
+#: core/models.py:282
+msgid "Alan Adı"
+msgstr ""
+
+#: core/models.py:282
+msgid "Veri anahtarı (otomatik üretilebilir)"
+msgstr ""
+
+#: core/models.py:283
+msgid "Alan Tipi"
+msgstr ""
+
+#: core/models.py:284
+msgid "Seçenekler"
+msgstr ""
+
+#: core/models.py:284
+msgid "Select için seçenekleri satır satır yazın"
+msgstr ""
+
+#: core/models.py:285 templates/core/category_form_fields_list.html:18
+msgid "Zorunlu"
+msgstr ""
+
+#: core/models.py:286 templates/core/category_form_fields_list.html:14
+#: templates/core/category_rules_list.html:17
+msgid "Sıra"
+msgstr ""
+
+#: core/models.py:287
+msgid "Yardım Metni"
+msgstr ""
 
 #: epica/settings.py:141
 msgid "Türkçe"
@@ -344,26 +390,12 @@ msgstr ""
 msgid "Yeni Alan"
 msgstr ""
 
-#: templates/core/category_form_fields_list.html:14
-#: templates/core/category_rules_list.html:17
-msgid "Sıra"
-msgstr ""
-
-#: templates/core/category_form_fields_list.html:15
-#: templates/core/category_rules_list.html:18
-msgid "Etiket"
-msgstr ""
-
 #: templates/core/category_form_fields_list.html:16
 msgid "Anahtar"
 msgstr ""
 
 #: templates/core/category_form_fields_list.html:17
 msgid "Tip"
-msgstr ""
-
-#: templates/core/category_form_fields_list.html:18
-msgid "Zorunlu"
 msgstr ""
 
 #: templates/core/category_form_fields_list.html:29

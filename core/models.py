@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from accounts.models import Organization
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 import uuid
 
 User = get_user_model()
@@ -270,19 +271,20 @@ class CategorySupplierRule(models.Model):
 
 class CategoryFormField(models.Model):
 	"""Owner-defined dynamic form field for a Category (customer request creation)."""
+	
 	class FieldType(models.TextChoices):
-		TEXT = "text", "Metin"
-		SELECT = "select", "Seçim (Dropdown)"
+		TEXT = "text", _("Metin")
+		SELECT = "select", _("Seçim (Dropdown)")
 
 	organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="category_form_fields")
 	category = models.ForeignKey('Category', on_delete=models.CASCADE, related_name='form_fields')
-	label = models.CharField(max_length=100)
-	name = models.SlugField(max_length=100, help_text="Veri anahtarı (otomatik üretilebilir)")
-	field_type = models.CharField(max_length=10, choices=FieldType.choices, default=FieldType.TEXT)
-	options = models.TextField(blank=True, help_text="Select için seçenekleri satır satır yazın")
-	required = models.BooleanField(default=False)
-	order = models.PositiveIntegerField(default=0)
-	help_text = models.CharField(max_length=200, blank=True)
+	label = models.CharField(max_length=100, verbose_name=_("Etiket"))
+	name = models.SlugField(max_length=100, verbose_name=_("Alan Adı"), help_text=_("Veri anahtarı (otomatik üretilebilir)"))
+	field_type = models.CharField(max_length=10, choices=FieldType.choices, default=FieldType.TEXT, verbose_name=_("Alan Tipi"))
+	options = models.TextField(blank=True, verbose_name=_("Seçenekler"), help_text=_("Select için seçenekleri satır satır yazın"))
+	required = models.BooleanField(default=False, verbose_name=_("Zorunlu"))
+	order = models.PositiveIntegerField(default=0, verbose_name=_("Sıra"))
+	help_text = models.CharField(max_length=200, blank=True, verbose_name=_("Yardım Metni"))
 	created_at = models.DateTimeField(auto_now_add=True)
 
 	class Meta:
