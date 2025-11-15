@@ -4,6 +4,14 @@ from django.db import migrations, models
 import uuid
 
 
+def generate_unique_tokens(apps, schema_editor):
+    """Generate unique UUID tokens for existing orders"""
+    Order = apps.get_model('billing', 'Order')
+    for order in Order.objects.all():
+        order.feedback_token = uuid.uuid4()
+        order.save(update_fields=['feedback_token'])
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,7 +19,16 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # First add field without unique constraint
         migrations.AddField(
+            model_name="order",
+            name="feedback_token",
+            field=models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, null=True),
+        ),
+        # Generate unique tokens for existing records
+        migrations.RunPython(generate_unique_tokens, reverse_code=migrations.RunPython.noop),
+        # Then alter to add unique constraint
+        migrations.AlterField(
             model_name="order",
             name="feedback_token",
             field=models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True),
