@@ -3,9 +3,10 @@ Action functions that the AI can execute
 """
 import logging
 from datetime import datetime, timedelta
-from django.db.models import Count, Avg, Q
+from django.db.models import Count, Avg, Q, Sum
 from django.utils import timezone
 from core.models import Ticket, Quote, Supplier
+from billing.models import Order
 
 logger = logging.getLogger(__name__)
 
@@ -274,4 +275,126 @@ def get_quote_stats(organization, period: str = 'month'):
         }
     except Exception as e:
         logger.error(f"Error in get_quote_stats: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def search_customer_orders(organization, customer_name: str):
+    """
+    Search orders by customer/portal user name
+    
+    Args:
+        organization: Organization instance
+        customer_name: Customer name to search for
+        
+    Returns:
+        Dict with order results
+    """
+    try:
+        # Search for orders where ticket's portal_user matches
+        orders = Order.objects.filter(
+            organization=organization,
+            ticket__portal_user__email__icontains=customer_name
+        ) | Order.objects.filter(
+            organization=organization,
+            ticket__portal_user__first_name__icontains=customer_name
+        ) | Order.objects.filter(
+            organization=organization,
+            ticket__portal_user__last_name__icontains=customer_name
+        )
+        
+        orders = orders.select_related('ticket__portal_user', 'supplier').order_by('-created_at')[:20]
+        
+        results = []
+        total_amount = 0
+        
+        for order in orders:
+            results.append({
+                'order_id': order.id,
+                'ticket_id': order.ticket_id,
+                'customer': order.ticket.portal_user.email,
+                'customer_name': f"{order.ticket.portal_user.first_name} {order.ticket.portal_user.last_name}".strip(),
+                'supplier': order.supplier.name if order.supplier else 'N/A',
+                'status': order.status,
+                'total': float(order.total),
+                'currency': order.currency,
+                'created_at': order.created_at.isoformat()
+            })
+            total_amount += order.total
+        
+        return {
+            'success': True,
+            'count': len(results),
+            'total_amount': float(total_amount),
+            'orders': results
+        }
+    except Exception as e:
+        logger.error(f"Error in search_customer_orders: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def get_order_stats(organization, period: str = 'month'):
+    """
+    Get order statistics for organization
+    
+    Args:
+        organization: Organization instance
+        period: Time period ('today', 'week', 'month', 'year', 'all')
+        
+    Returns:
+        Dict with statistics
+    """
+    try:
+        # Calculate date range
+        now = timezone.now()
+        if period == 'today':
+            start_date = now.replace(hour=0, minute=0, second=0)
+        elif period == 'week':
+            start_date = now - timedelta(days=7)
+        elif period == 'month':
+            start_date = now - timedelta(days=30)
+        elif period == 'year':
+            start_date = now - timedelta(days=365)
+        else:  # all
+            start_date = None
+        
+        # Base queryset
+        orders = Order.objects.filter(organization=organization)
+        if start_date:
+            orders = orders.filter(created_at__gte=start_date)
+        
+        # Calculate stats
+        total_count = orders.count()
+        total_amount = orders.aggregate(total=Sum('total'))['total'] or 0
+        
+        # Status breakdown
+        status_breakdown = orders.values('status').annotate(count=Count('id'))
+        
+        # Top customers
+        top_customers = orders.values(
+            'ticket__portal_user__email',
+            'ticket__portal_user__first_name',
+            'ticket__portal_user__last_name'
+        ).annotate(
+            order_count=Count('id'),
+            total_spent=Sum('total')
+        ).order_by('-total_spent')[:5]
+        
+        return {
+            'success': True,
+            'period': period,
+            'total_orders': total_count,
+            'total_amount': float(total_amount),
+            'by_status': {item['status']: item['count'] for item in status_breakdown},
+            'top_customers': [
+                {
+                    'email': item['ticket__portal_user__email'],
+                    'name': f"{item['ticket__portal_user__first_name']} {item['ticket__portal_user__last_name']}".strip(),
+                    'order_count': item['order_count'],
+                    'total_spent': float(item['total_spent'])
+                }
+                for item in top_customers
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error in get_order_stats: {e}")
         return {'success': False, 'error': str(e)}

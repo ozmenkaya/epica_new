@@ -162,6 +162,35 @@ Be helpful, professional, and accurate."""
                     },
                     "required": ["period"]
                 }
+            },
+            {
+                "name": "search_customer_orders",
+                "description": "Search orders by customer name or email. Use this to find a specific customer's orders and total spending.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "customer_name": {
+                            "type": "string",
+                            "description": "Customer name or email to search for"
+                        }
+                    },
+                    "required": ["customer_name"]
+                }
+            },
+            {
+                "name": "get_order_stats",
+                "description": "Get order statistics (total orders, amounts, top customers, status breakdown)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "period": {
+                            "type": "string",
+                            "enum": ["today", "week", "month", "year", "all"],
+                            "description": "Time period for statistics"
+                        }
+                    },
+                    "required": ["period"]
+                }
             }
         ]
     
@@ -189,6 +218,10 @@ Be helpful, professional, and accurate."""
                 return actions.get_supplier_stats(self.organization)
             elif function_name == "get_quote_stats":
                 return actions.get_quote_stats(self.organization, **arguments)
+            elif function_name == "search_customer_orders":
+                return actions.search_customer_orders(self.organization, **arguments)
+            elif function_name == "get_order_stats":
+                return actions.get_order_stats(self.organization, **arguments)
             else:
                 return {"error": f"Unknown function: {function_name}"}
         except Exception as e:
