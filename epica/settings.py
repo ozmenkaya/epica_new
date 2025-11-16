@@ -35,6 +35,9 @@ DEBUG = os.getenv("DEBUG", "True").lower() in ["1", "true", "yes"]
 ALLOWED_HOSTS = [h for h in os.getenv("ALLOWED_HOSTS", "*").split(",") if h]
 CSRF_TRUSTED_ORIGINS = [o for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
 
+# Testing flag (used to disable certain features during tests)
+TESTING = False
+
 
 # Application definition
 

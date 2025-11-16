@@ -121,3 +121,22 @@ def org_settings(request, pk: int):
 	}
 	
 	return render(request, "accounts/org_settings.html", {"org": org, "form": form})
+
+
+@backoffice_only
+def org_delete(request, pk: int):
+	org = get_object_or_404(Organization, pk=pk, memberships__user=request.user)
+	
+	# Only owner can delete organization
+	membership = Membership.objects.filter(user=request.user, organization=org).first()
+	if not membership or membership.role != Membership.Role.OWNER:
+		messages.error(request, "Sadece organizasyon sahibi silebilir")
+		return redirect("org_list")
+	
+	if request.method == "POST":
+		org_name = org.name
+		org.delete()  # This will trigger the post_delete signal
+		messages.success(request, f"{org_name} organizasyonu silindi")
+		return redirect("org_list")
+	
+	return render(request, "accounts/org_delete.html", {"org": org})

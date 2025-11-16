@@ -26,7 +26,10 @@
               <td><code>{{ org.slug }}</code></td>
               <td class="text-end">
                 <a class="btn btn-sm btn-outline-secondary me-1" href="{% url 'org_settings' org.id %}"><i class="bi bi-gear"></i> {% trans "Ayarlar" %}</a>
-                <a class="btn btn-sm btn-outline-primary" href="/accounts/orgs/switch/{{ org.slug }}/">{% trans "Geç" %}</a>
+                <a class="btn btn-sm btn-outline-primary me-1" href="/accounts/orgs/switch/{{ org.slug }}/">{% trans "Geç" %}</a>
+                {% if org.owner == request.user %}
+                <a class="btn btn-sm btn-outline-danger" href="{% url 'org_delete' org.id %}"><i class="bi bi-trash"></i> {% trans "Sil" %}</a>
+                {% endif %}
               </td>
             </tr>
           {% empty %}
