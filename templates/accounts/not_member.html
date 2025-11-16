@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Erişim Yok" %} - Epica{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-warning">
+                <div class="card-body text-center p-5">
+                    <div class="mb-4">
+                        <i class="bi bi-shield-exclamation text-warning" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <h2 class="card-title mb-3">{% trans "Bu Organizasyona Erişiminiz Yok" %}</h2>
+                    
+                    <p class="text-muted mb-4">
+                        <strong>{{ org.name }}</strong> organizasyonunun üyesi değilsiniz.
+                    </p>
+                    
+                    <div class="alert alert-info text-start">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-info-circle"></i> {% trans "Erişim Almak İçin:" %}
+                        </h6>
+                        <ul class="mb-0">
+                            <li>{% trans "Organizasyon sahibi veya yöneticisinden davetiye isteyin" %}</li>
+                            <li>{% trans "Organizasyon yöneticisi sizi üye olarak ekleyebilir" %}</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <p class="text-muted small mb-3">
+                            <i class="bi bi-person-circle"></i> 
+                            {% trans "Giriş yapmış kullanıcı:" %} <strong>{{ user.username }}</strong>
+                        </p>
+                        
+                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                            <a href="{% url 'org_list' %}" class="btn btn-primary">
+                                <i class="bi bi-building"></i> {% trans "Organizasyonlarım" %}
+                            </a>
+                            <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-house"></i> {% trans "Ana Sayfa" %}
+                            </a>
+                            <a href="{% url 'logout' %}" class="btn btn-outline-danger">
+                                <i class="bi bi-box-arrow-right"></i> {% trans "Çıkış Yap" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <p class="text-muted small">
+                    <i class="bi bi-globe"></i>
+                    {% trans "Subdomain:" %} <code>{{ org.slug }}.epica.com.tr</code>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

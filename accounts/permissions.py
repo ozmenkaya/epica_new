@@ -30,6 +30,7 @@ def tenant_member_required(view_func):
     @login_required
     @wraps(view_func)
     def _wrapped(request: HttpRequest, *args, **kwargs):
+        from django.shortcuts import render
         guard = _portal_guard(request)
         if guard is not None:
             return guard
@@ -37,7 +38,11 @@ def tenant_member_required(view_func):
         if not org:
             return redirect("org_list")
         if not Membership.objects.filter(user=request.user, organization=org).exists():
-            return HttpResponseForbidden("Not a member of this organization")
+            # Show a friendly error page instead of 403
+            return render(request, "accounts/not_member.html", {
+                "org": org,
+                "user": request.user
+            }, status=403)
         return view_func(request, *args, **kwargs)
 
     return _wrapped
