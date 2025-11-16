@@ -11,4 +11,9 @@ urlpatterns = [
     path("orgs/switch/<slug:slug>/", views.org_switch, name="org_switch"),
     path("orgs/<int:pk>/settings/", views.org_settings, name="org_settings"),
     path("orgs/<int:pk>/delete/", views.org_delete, name="org_delete"),
+    # Organization members
+    path("orgs/<int:pk>/members/", views.org_members, name="org_members"),
+    path("orgs/<int:pk>/members/add/", views.org_member_add, name="org_member_add"),
+    path("orgs/<int:pk>/members/<int:member_id>/edit/", views.org_member_edit, name="org_member_edit"),
+    path("orgs/<int:pk>/members/<int:member_id>/delete/", views.org_member_delete, name="org_member_delete"),
 ]

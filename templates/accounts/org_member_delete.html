@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ org.name }} - {% trans "Kullanıcıyı Çıkar" %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-6">
+    <div class="card shadow-sm border-danger">
+      <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-exclamation-triangle"></i> {% trans "Kullanıcıyı Organizasyondan Çıkar" %}
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-warning">
+          <h6 class="alert-heading">{% trans "Emin misiniz?" %}</h6>
+          <p class="mb-0">
+            <strong>{{ member.user.username }}</strong> kullanıcısını <strong>{{ org.name }}</strong> organizasyonundan çıkarmak üzeresiniz.
+          </p>
+        </div>
+        
+        <div class="mb-3">
+          <p><strong>{% trans "Kullanıcı:" %}</strong> {{ member.user.username }}</p>
+          <p><strong>{% trans "E-posta:" %}</strong> {{ member.user.email }}</p>
+          <p><strong>{% trans "Rol:" %}</strong> 
+            {% if member.role == "admin" %}
+              <span class="badge bg-info">{% trans "Yönetici" %}</span>
+            {% else %}
+              <span class="badge bg-secondary">{% trans "Üye" %}</span>
+            {% endif %}
+          </p>
+        </div>
+        
+        <p class="text-muted small">
+          <i class="bi bi-info-circle"></i> {% trans "Bu kullanıcı organizasyona erişimini kaybedecek." %}
+        </p>
+        
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash"></i> {% trans "Evet, Çıkar" %}
+            </button>
+            <a href="{% url 'org_members' org.id %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-lg"></i> {% trans "İptal" %}
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
