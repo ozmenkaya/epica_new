@@ -97,12 +97,31 @@ WSGI_APPLICATION = 'epica.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# Multi-tenant database configuration
+# Each organization can have its own database
 DATABASES = {
     'default': dj_database_url.parse(
         os.getenv('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
         conn_max_age=600,
     )
 }
+
+# Add tenant databases dynamically
+# Format: TENANT_DB_{SLUG}=postgresql://...
+# Example: TENANT_DB_HELMEX=postgresql://user:pass@localhost/epica_helmex
+import re
+for key, value in os.environ.items():
+    if key.startswith('TENANT_DB_'):
+        # Extract tenant slug from env var name
+        # TENANT_DB_HELMEX → helmex
+        tenant_slug = key[10:].lower()  # Remove 'TENANT_DB_' prefix
+        db_alias = f'tenant_{tenant_slug}'
+        
+        # Parse database URL
+        DATABASES[db_alias] = dj_database_url.parse(value, conn_max_age=600)
+
+# Database router for multi-tenant isolation
+DATABASE_ROUTERS = ['core.db_router.TenantDatabaseRouter']
 
 
 # Password validation
