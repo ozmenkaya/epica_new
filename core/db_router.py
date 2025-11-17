@@ -45,8 +45,8 @@ class TenantDatabaseRouter:
         """
         Route read operations to tenant database.
         """
-        # Auth models always go to default database
-        if model._meta.app_label == 'auth':
+        # Auth and accounts models always go to default database
+        if model._meta.app_label in ('auth', 'accounts'):
             return 'default'
         
         return self.get_tenant_db()
@@ -55,8 +55,8 @@ class TenantDatabaseRouter:
         """
         Route write operations to tenant database.
         """
-        # Auth models always go to default database
-        if model._meta.app_label == 'auth':
+        # Auth and accounts models always go to default database
+        if model._meta.app_label in ('auth', 'accounts'):
             return 'default'
         
         return self.get_tenant_db()
@@ -73,10 +73,10 @@ class TenantDatabaseRouter:
         """
         Allow migrations to run on all databases.
         
-        Auth models only migrate to default database.
-        All other models migrate to all databases.
+        Auth and accounts models only migrate to default database.
+        All other models migrate to all databases (default + tenant DBs).
         """
-        if app_label == 'auth':
+        if app_label in ('auth', 'accounts'):
             return db == 'default'
         
         # Allow migrations for all tenant databases

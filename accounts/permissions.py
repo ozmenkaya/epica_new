@@ -37,7 +37,7 @@ def tenant_member_required(view_func):
         org = getattr(request, "tenant", None)
         if not org:
             return redirect("org_list")
-        if not Membership.objects.filter(user=request.user, organization=org).exists():
+        if not Membership.objects.using('default').filter(user=request.user, organization=org).exists():
             # Show a friendly error page instead of 403
             return render(request, "accounts/not_member.html", {
                 "org": org,
@@ -59,7 +59,7 @@ def tenant_role_required(roles: Iterable[str]):
             org = getattr(request, "tenant", None)
             if not org:
                 return redirect("org_list")
-            mem = Membership.objects.filter(user=request.user, organization=org).first()
+            mem = Membership.objects.using('default').filter(user=request.user, organization=org).first()
             allowed = False
             if mem:
                 if mem.role in roles:
@@ -94,7 +94,7 @@ def page_permission_required(permission_key: str):
             if not org:
                 return redirect("org_list")
             
-            mem = Membership.objects.filter(user=request.user, organization=org).first()
+            mem = Membership.objects.using('default').filter(user=request.user, organization=org).first()
             if not mem:
                 return render(request, "accounts/not_member.html", {
                     "org": org,

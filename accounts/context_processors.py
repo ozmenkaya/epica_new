@@ -19,7 +19,7 @@ def tenant(request: HttpRequest):
 
     user = getattr(request, "user", None)
     if org is not None and getattr(user, "is_authenticated", False):
-        mem = Membership.objects.filter(user=user, organization=org).first()
+        mem = Membership.objects.using('default').filter(user=user, organization=org).first()
         if mem:
             is_owner = mem.role == Membership.Role.OWNER
             is_admin = mem.role == Membership.Role.ADMIN or is_owner

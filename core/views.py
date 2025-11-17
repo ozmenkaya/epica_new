@@ -237,7 +237,7 @@ def role_landing(request):
 	org = getattr(request, "tenant", None)
 	if org is None:
 		user_orgs = (
-			Membership.objects.filter(user=request.user)
+			Membership.objects.using('default').filter(user=request.user)
 			.select_related("organization")
 			.values_list("organization__slug", flat=True)
 		)
@@ -248,7 +248,7 @@ def role_landing(request):
 		else:
 			return redirect("org_list")
 
-	mem = Membership.objects.filter(user=request.user, organization__slug=request.session.get("current_org")).select_related("role_fk").first()
+	mem = Membership.objects.using('default').filter(user=request.user, organization__slug=request.session.get("current_org")).select_related("role_fk").first()
 	if not mem:
 		return redirect("org_list")
 
