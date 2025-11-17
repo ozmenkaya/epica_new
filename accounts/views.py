@@ -40,7 +40,7 @@ def signup_view(request):
 
 @backoffice_only
 def org_list(request):
-	orgs = Organization.objects.filter(memberships__user=request.user).distinct()
+	orgs = Organization.objects.using('default').filter(memberships__user=request.user).distinct()
 	current = getattr(request, "tenant", None)
 	return render(request, "accounts/org_list.html", {"orgs": orgs, "current": current})
 
@@ -50,8 +50,8 @@ def org_create(request):
 	if request.method == "POST":
 		name = request.POST.get("name", "").strip()
 		if name:
-			org = Organization.objects.create(name=name, owner=request.user)
-			Membership.objects.create(user=request.user, organization=org, role=Membership.Role.OWNER)
+			org = Organization.objects.db_manager('default').create(name=name, owner=request.user)
+			Membership.objects.db_manager('default').create(user=request.user, organization=org, role=Membership.Role.OWNER)
 			request.session["current_org"] = org.slug
 			return redirect("role_landing")
 		messages.error(request, "İsim gerekli")
@@ -60,7 +60,7 @@ def org_create(request):
 
 @backoffice_only
 def org_switch(request, slug: str):
-	org = Organization.objects.filter(slug=slug, memberships__user=request.user).first()
+	org = Organization.objects.using('default').filter(slug=slug, memberships__user=request.user).first()
 	if not org:
 		messages.error(request, "Bu organizasyona erişiminiz yok")
 		return redirect("org_list")
@@ -70,10 +70,10 @@ def org_switch(request, slug: str):
 
 @backoffice_only
 def org_settings(request, pk: int):
-	org = get_object_or_404(Organization, pk=pk, memberships__user=request.user)
+	org = get_object_or_404(Organization.objects.using('default'), pk=pk, memberships__user=request.user)
 	
 	# Check if user is owner or admin
-	membership = Membership.objects.filter(user=request.user, organization=org).first()
+	membership = Membership.objects.using('default').filter(user=request.user, organization=org).first()
 	if not membership or membership.role not in [Membership.Role.OWNER, Membership.Role.ADMIN]:
 		messages.error(request, "Bu ayarlara erişim yetkiniz yok")
 		return redirect("org_list")
@@ -105,7 +105,7 @@ def org_settings(request, pk: int):
 				messages.error(request, "E-posta ayarlarını kullanmak için SMTP sunucu, port, kullanıcı adı ve şifre alanları gereklidir")
 				return render(request, "accounts/org_settings.html", {"org": org, "form": request.POST})
 		
-		org.save()
+		org.save(using='default')
 		messages.success(request, "E-posta ayarları kaydedildi")
 		return redirect("org_list")
 	
@@ -125,17 +125,17 @@ def org_settings(request, pk: int):
 
 @backoffice_only
 def org_delete(request, pk: int):
-	org = get_object_or_404(Organization, pk=pk, memberships__user=request.user)
+	org = get_object_or_404(Organization.objects.using('default'), pk=pk, memberships__user=request.user)
 	
 	# Only owner can delete organization
-	membership = Membership.objects.filter(user=request.user, organization=org).first()
+	membership = Membership.objects.using('default').filter(user=request.user, organization=org).first()
 	if not membership or membership.role != Membership.Role.OWNER:
 		messages.error(request, "Sadece organizasyon sahibi silebilir")
 		return redirect("org_list")
 	
 	if request.method == "POST":
 		org_name = org.name
-		org.delete()  # This will trigger the post_delete signal
+		org.delete(using='default')  # This will trigger the post_delete signal
 		messages.success(request, f"{org_name} organizasyonu silindi")
 		return redirect("org_list")
 	
@@ -144,15 +144,15 @@ def org_delete(request, pk: int):
 
 @backoffice_only
 def org_members(request, pk: int):
-	org = get_object_or_404(Organization, pk=pk, memberships__user=request.user)
+	org = get_object_or_404(Organization.objects.using('default'), pk=pk, memberships__user=request.user)
 	
 	# Check if user is owner or admin
-	membership = Membership.objects.filter(user=request.user, organization=org).first()
+	membership = Membership.objects.using('default').filter(user=request.user, organization=org).first()
 	if not membership or membership.role not in [Membership.Role.OWNER, Membership.Role.ADMIN]:
 		messages.error(request, "Bu sayfaya erişim yetkiniz yok")
 		return redirect("org_list")
 	
-	members = Membership.objects.filter(organization=org).select_related('user').order_by('-created_at')
+	members = Membership.objects.using('default').filter(organization=org).select_related('user').order_by('-created_at')
 	
 	return render(request, "accounts/org_members.html", {
 		"org": org,
@@ -166,10 +166,10 @@ def org_member_add(request, pk: int):
 	from django.contrib.auth import get_user_model
 	User = get_user_model()
 	
-	org = get_object_or_404(Organization, pk=pk, memberships__user=request.user)
+	org = get_object_or_404(Organization.objects.using('default'), pk=pk, memberships__user=request.user)
 	
 	# Only owner or admin can add members
-	membership = Membership.objects.filter(user=request.user, organization=org).first()
+	membership = Membership.objects.using('default').filter(user=request.user, organization=org).first()
 	if not membership or membership.role not in [Membership.Role.OWNER, Membership.Role.ADMIN]:
 		messages.error(request, "Kullanıcı ekleme yetkiniz yok")
 		return redirect("org_members", pk=pk)
@@ -185,9 +185,9 @@ def org_member_add(request, pk: int):
 			messages.error(request, "Kullanıcı adı veya e-posta gerekli")
 			return render(request, "accounts/org_member_add.html", {"org": org})
 		
-		# Find user by username or email
-		user = User.objects.filter(username=username_or_email).first() or \
-		       User.objects.filter(email=username_or_email).first()
+		# Find user by username or email (always use default database for auth)
+		user = User.objects.using('default').filter(username=username_or_email).first() or \
+		       User.objects.using('default').filter(email=username_or_email).first()
 		
 		if not user:
 			if create_if_not_exists:
@@ -203,7 +203,7 @@ def org_member_add(request, pk: int):
 					# Ensure unique username
 					base_username = username
 					counter = 1
-					while User.objects.filter(username=username).exists():
+					while User.objects.using('default').filter(username=username).exists():
 						username = f"{base_username}{counter}"
 						counter += 1
 				else:
@@ -216,8 +216,8 @@ def org_member_add(request, pk: int):
 				else:
 					password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
 				
-				# Create user
-				user = User.objects.create_user(username=username, email=email, password=password)
+				# Create user (always in default database)
+				user = User.objects.db_manager('default').create_user(username=username, email=email, password=password)
 				messages.success(request, f"Yeni kullanıcı oluşturuldu: {username} (Şifre: {password})")
 			else:
 				messages.error(request, f"'{username_or_email}' kullanıcısı bulunamadı")
@@ -232,30 +232,30 @@ def org_member_add(request, pk: int):
 		# Update email if provided and different
 		if email_input and user.email != email_input:
 			user.email = email_input
-			user.save()
+			user.save(using='default')
 			messages.info(request, f"{user.username} kullanıcısının e-posta adresi güncellendi")
 		
 		# Update password if provided
 		if password_input:
 			user.set_password(password_input)
-			user.save()
+			user.save(using='default')
 			messages.info(request, f"{user.username} kullanıcısının şifresi güncellendi")
 		
-		# Check if already a member
-		if Membership.objects.filter(user=user, organization=org).exists():
+		# Check if already a member (always use default database for organization data)
+		if Membership.objects.using('default').filter(user=user, organization=org).exists():
 			messages.error(request, f"{user.username} zaten bu organizasyonun üyesi")
 			return redirect("org_members", pk=pk)
 		
 		# Get selected permissions
 		permissions_input = request.POST.getlist("permissions")
 		
-		# Create membership
-		membership = Membership.objects.create(user=user, organization=org, role=role)
+		# Create membership (always in default database)
+		membership = Membership.objects.db_manager('default').create(user=user, organization=org, role=role)
 		
 		# Set custom permissions if provided
 		if permissions_input:
 			membership.custom_permissions = {"allowed": permissions_input}
-			membership.save()
+			membership.save(using='default')
 		
 		messages.success(request, f"{user.username} organizasyona eklendi")
 		return redirect("org_members", pk=pk)
@@ -273,11 +273,11 @@ def org_member_add(request, pk: int):
 
 @backoffice_only
 def org_member_edit(request, pk: int, member_id: int):
-	org = get_object_or_404(Organization, pk=pk, memberships__user=request.user)
-	member = get_object_or_404(Membership, pk=member_id, organization=org)
+	org = get_object_or_404(Organization.objects.using('default'), pk=pk, memberships__user=request.user)
+	member = get_object_or_404(Membership.objects.using('default'), pk=member_id, organization=org)
 	
 	# Only owner or admin can edit members
-	user_membership = Membership.objects.filter(user=request.user, organization=org).first()
+	user_membership = Membership.objects.using('default').filter(user=request.user, organization=org).first()
 	if not user_membership or user_membership.role not in [Membership.Role.OWNER, Membership.Role.ADMIN]:
 		messages.error(request, "Kullanıcı düzenleme yetkiniz yok")
 		return redirect("org_members", pk=pk)
@@ -304,7 +304,7 @@ def org_member_edit(request, pk: int, member_id: int):
 		else:
 			member.custom_permissions = {}
 		
-		member.save()
+		member.save(using='default')
 		messages.success(request, f"{member.user.username} rolü ve yetkileri güncellendi")
 		return redirect("org_members", pk=pk)
 	
@@ -323,11 +323,11 @@ def org_member_edit(request, pk: int, member_id: int):
 
 @backoffice_only
 def org_member_delete(request, pk: int, member_id: int):
-	org = get_object_or_404(Organization, pk=pk, memberships__user=request.user)
-	member = get_object_or_404(Membership, pk=member_id, organization=org)
+	org = get_object_or_404(Organization.objects.using('default'), pk=pk, memberships__user=request.user)
+	member = get_object_or_404(Membership.objects.using('default'), pk=member_id, organization=org)
 	
 	# Only owner or admin can delete members
-	user_membership = Membership.objects.filter(user=request.user, organization=org).first()
+	user_membership = Membership.objects.using('default').filter(user=request.user, organization=org).first()
 	if not user_membership or user_membership.role not in [Membership.Role.OWNER, Membership.Role.ADMIN]:
 		messages.error(request, "Kullanıcı silme yetkiniz yok")
 		return redirect("org_members", pk=pk)
@@ -344,7 +344,7 @@ def org_member_delete(request, pk: int, member_id: int):
 	
 	if request.method == "POST":
 		username = member.user.username
-		member.delete()
+		member.delete(using='default')
 		messages.success(request, f"{username} organizasyondan çıkarıldı")
 		return redirect("org_members", pk=pk)
 	
