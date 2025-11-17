@@ -40,6 +40,17 @@
           </div>
           
           <div class="mb-3">
+            <label for="password" class="form-label">{% trans "Şifre" %}</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="password" 
+                   name="password" 
+                   value="{{ password }}"
+                   placeholder="{% trans 'Opsiyonel: Özel şifre belirtin' %}">
+            <div class="form-text">{% trans "Opsiyonel: Kullanıcının şifresini belirtin veya güncelleyin. Boş bırakılırsa otomatik oluşturulur." %}</div>
+          </div>
+          
+          <div class="mb-3">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="create_if_not_exists" name="create_if_not_exists" value="1">
               <label class="form-check-label" for="create_if_not_exists">

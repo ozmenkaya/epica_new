@@ -177,6 +177,7 @@ def org_member_add(request, pk: int):
 	if request.method == "POST":
 		username_or_email = request.POST.get("username_or_email", "").strip()
 		email_input = request.POST.get("email", "").strip()
+		password_input = request.POST.get("password", "").strip()
 		role = request.POST.get("role", Membership.Role.MEMBER)
 		create_if_not_exists = request.POST.get("create_if_not_exists") == "1"
 		
@@ -209,8 +210,11 @@ def org_member_add(request, pk: int):
 					username = username_or_email
 					email = ""
 				
-				# Generate random password
-				password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+				# Use provided password or generate random one
+				if password_input:
+					password = password_input
+				else:
+					password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
 				
 				# Create user
 				user = User.objects.create_user(username=username, email=email, password=password)
@@ -221,6 +225,7 @@ def org_member_add(request, pk: int):
 					"org": org,
 					"username_or_email": username_or_email,
 					"email": email_input,
+					"password": password_input,
 					"roles": Membership.Role.choices
 				})
 		
@@ -229,6 +234,12 @@ def org_member_add(request, pk: int):
 			user.email = email_input
 			user.save()
 			messages.info(request, f"{user.username} kullanıcısının e-posta adresi güncellendi")
+		
+		# Update password if provided
+		if password_input:
+			user.set_password(password_input)
+			user.save()
+			messages.info(request, f"{user.username} kullanıcısının şifresi güncellendi")
 		
 		# Check if already a member
 		if Membership.objects.filter(user=user, organization=org).exists():
