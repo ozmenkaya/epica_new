@@ -22,9 +22,22 @@
                    class="form-control" 
                    id="username_or_email" 
                    name="username_or_email" 
+                   value="{{ username_or_email }}"
                    required
                    placeholder="{% trans 'Örn: john veya john@example.com' %}">
             <div class="form-text">{% trans "Eklemek istediğiniz kullanıcının kullanıcı adını veya e-posta adresini girin" %}</div>
+          </div>
+          
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="create_if_not_exists" name="create_if_not_exists" value="1">
+              <label class="form-check-label" for="create_if_not_exists">
+                {% trans "Kullanıcı yoksa yeni oluştur" %}
+              </label>
+              <div class="form-text">
+                <i class="bi bi-info-circle"></i> {% trans "Bu seçenek işaretliyse ve kullanıcı bulunamazsa, otomatik olarak yeni bir hesap oluşturulur ve rastgele şifre atanır." %}
+              </div>
+            </div>
           </div>
           
           <div class="mb-3">

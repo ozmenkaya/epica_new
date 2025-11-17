@@ -177,6 +177,7 @@ def org_member_add(request, pk: int):
 	if request.method == "POST":
 		username_or_email = request.POST.get("username_or_email", "").strip()
 		role = request.POST.get("role", Membership.Role.MEMBER)
+		create_if_not_exists = request.POST.get("create_if_not_exists") == "1"
 		
 		if not username_or_email:
 			messages.error(request, "Kullanıcı adı veya e-posta gerekli")
@@ -187,8 +188,38 @@ def org_member_add(request, pk: int):
 		       User.objects.filter(email=username_or_email).first()
 		
 		if not user:
-			messages.error(request, f"'{username_or_email}' kullanıcısı bulunamadı")
-			return render(request, "accounts/org_member_add.html", {"org": org})
+			if create_if_not_exists:
+				# Create new user
+				import secrets
+				import string
+				
+				# Check if input is email
+				if "@" in username_or_email:
+					email = username_or_email
+					# Generate username from email
+					username = email.split("@")[0]
+					# Ensure unique username
+					base_username = username
+					counter = 1
+					while User.objects.filter(username=username).exists():
+						username = f"{base_username}{counter}"
+						counter += 1
+				else:
+					username = username_or_email
+					email = ""
+				
+				# Generate random password
+				password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+				
+				# Create user
+				user = User.objects.create_user(username=username, email=email, password=password)
+				messages.success(request, f"Yeni kullanıcı oluşturuldu: {username} (Şifre: {password})")
+			else:
+				messages.error(request, f"'{username_or_email}' kullanıcısı bulunamadı")
+				return render(request, "accounts/org_member_add.html", {
+					"org": org,
+					"username_or_email": username_or_email
+				})
 		
 		# Check if already a member
 		if Membership.objects.filter(user=user, organization=org).exists():
