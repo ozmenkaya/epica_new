@@ -73,6 +73,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.CaseInsensitiveModelBackend',  # Custom case-insensitive auth
+    'django.contrib.auth.backends.ModelBackend',  # Fallback to default
+]
+
 ROOT_URLCONF = 'epica.urls'
 
 TEMPLATES = [
