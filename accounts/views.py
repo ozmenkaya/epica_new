@@ -65,7 +65,12 @@ def org_switch(request, slug: str):
 		messages.error(request, "Bu organizasyona erişiminiz yok")
 		return redirect("org_list")
 	request.session["current_org"] = org.slug
-	return redirect("role_landing")
+	
+	# Redirect to organization subdomain
+	from django.http import HttpResponseRedirect
+	protocol = 'https' if request.is_secure() else 'http'
+	subdomain_url = f"{protocol}://{org.slug}.epica.com.tr/tr/portal/"
+	return HttpResponseRedirect(subdomain_url)
 
 
 @backoffice_only
