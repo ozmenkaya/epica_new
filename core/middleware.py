@@ -45,10 +45,11 @@ class TenantMiddleware(MiddlewareMixin):
             helmex.epica.com.tr → 'helmex'
             acme.epica.com.tr → 'acme'
             epica.com.tr → None (main site)
+            www.epica.com.tr → None (main site)
             localhost → None
         """
         # List of main domains (no subdomain)
-        main_domains = ['epica.com.tr', 'localhost', '127.0.0.1']
+        main_domains = ['epica.com.tr', 'www.epica.com.tr', 'localhost', '127.0.0.1']
         
         # Check if it's a main domain
         if host in main_domains:
