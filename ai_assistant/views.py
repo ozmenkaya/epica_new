@@ -1,5 +1,6 @@
 import logging
 import json
+from functools import wraps
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.http import require_http_methods, require_POST
@@ -8,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from ai_assistant.models import Conversation, Message, AIAction
 from ai_assistant.services.agent import AIAgent
+from accounts.models import Membership
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,38 @@ def get_current_org(request):
     return getattr(request, 'tenant', None)
 
 
+def owner_required(view_func):
+    """Decorator to check if user is owner of the organization"""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        organization = get_current_org(request)
+        
+        if not organization:
+            return JsonResponse({
+                'success': False,
+                'error': 'No organization selected.'
+            }, status=400)
+        
+        membership = Membership.objects.using('default').filter(
+            user=request.user,
+            organization=organization
+        ).first()
+        
+        if not membership or membership.role != Membership.Role.OWNER:
+            if request.method in ['POST', 'DELETE', 'PUT', 'PATCH']:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Only organization owners can access AI Assistant.'
+                }, status=403)
+            else:
+                return render(request, 'accounts/no_permission.html', status=403)
+        
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 @login_required
+@owner_required
 @require_http_methods(["GET", "POST"])
 def chat_view(request):
     """
@@ -27,12 +60,6 @@ def chat_view(request):
     POST: Create new conversation
     """
     organization = get_current_org(request)
-    
-    if not organization:
-        return JsonResponse({
-            'success': False,
-            'error': 'No organization selected. Please select an organization first.'
-        }, status=400)
     
     if request.method == "POST":
         # Create new conversation
@@ -58,6 +85,7 @@ def chat_view(request):
 
 
 @login_required
+@owner_required
 @require_POST
 def send_message(request, conversation_id):
     """
@@ -197,6 +225,7 @@ def get_conversation(request, conversation_id):
 
 
 @login_required
+@owner_required
 @require_http_methods(["DELETE"])
 def delete_conversation(request, conversation_id):
     """
@@ -219,6 +248,7 @@ def delete_conversation(request, conversation_id):
 
 
 @login_required
+@owner_required
 @require_http_methods(["POST"])
 def message_feedback(request, message_id):
     """
@@ -268,6 +298,7 @@ def message_feedback(request, message_id):
 
 
 @login_required
+@owner_required
 def ai_stats(request):
     """
     AI Statistics page - shows usage stats, feedback, and learning metrics
@@ -355,6 +386,7 @@ def ai_stats(request):
 
 
 @login_required
+@owner_required
 def ai_settings(request):
     """
     AI Settings page - configuration and preferences
