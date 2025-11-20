@@ -72,7 +72,7 @@ def chat_view(request):
         # Create new conversation
         try:
             conversation = Conversation.objects.create(
-                organization=organization,
+                organization_id=organization.id,
                 user_id=request.user.id,
                 title="New Chat"
             )
@@ -162,9 +162,9 @@ def send_message(request, conversation_id):
         # Log actions if any
         for func_call in response.get('function_calls', []):
             AIAction.objects.create(
-                message=assistant_msg,
-                organization=organization,
-                user=request.user,
+                message_id=assistant_msg.id,
+                organization_id=organization.id,
+                user_id=request.user.id,
                 action_type='data_query',  # Or derive from function name
                 status='success',
                 input_data={'function': func_call['name']},
