@@ -4,7 +4,7 @@ from functools import wraps
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.http import require_http_methods, require_POST
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from ai_assistant.models import Conversation, Message, AIAction
@@ -57,6 +57,7 @@ def owner_required(view_func):
 
 @login_required
 @owner_required
+@ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def chat_view(request):
     """
