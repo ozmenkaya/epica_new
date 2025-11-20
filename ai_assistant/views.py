@@ -25,7 +25,10 @@ def owner_required(view_func):
     def wrapper(request, *args, **kwargs):
         organization = get_current_org(request)
         
+        logger.info(f"AI Assistant access - User: {request.user.username}, Org: {organization.slug if organization else 'None'}")
+        
         if not organization:
+            logger.warning(f"AI Assistant access denied - No organization for user {request.user.username}")
             return JsonResponse({
                 'success': False,
                 'error': 'No organization selected.'
@@ -36,7 +39,10 @@ def owner_required(view_func):
             organization=organization
         ).first()
         
+        logger.info(f"AI Assistant membership check - User: {request.user.username}, Org: {organization.slug}, Membership: {membership.role if membership else 'None'}")
+        
         if not membership:
+            logger.warning(f"AI Assistant access denied - User {request.user.username} not member of {organization.slug}")
             if request.method in ['POST', 'DELETE', 'PUT', 'PATCH']:
                 return JsonResponse({
                     'success': False,
@@ -65,7 +71,7 @@ def chat_view(request):
         # Create new conversation
         conversation = Conversation.objects.create(
             organization=organization,
-            user=request.user,
+            user_id=request.user.id,
             title="New Chat"
         )
         return JsonResponse({
