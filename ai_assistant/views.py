@@ -20,7 +20,7 @@ def get_current_org(request):
 
 
 def owner_required(view_func):
-    """Decorator to check if user is owner of the organization"""
+    """Decorator to check if user is member of the organization (owners only can access settings/stats)"""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         organization = get_current_org(request)
@@ -36,11 +36,11 @@ def owner_required(view_func):
             organization=organization
         ).first()
         
-        if not membership or membership.role != Membership.Role.OWNER:
+        if not membership:
             if request.method in ['POST', 'DELETE', 'PUT', 'PATCH']:
                 return JsonResponse({
                     'success': False,
-                    'error': 'Only organization owners can access AI Assistant.'
+                    'error': 'You must be a member of this organization to access AI Assistant.'
                 }, status=403)
             else:
                 return render(request, 'accounts/no_permission.html', status=403)
