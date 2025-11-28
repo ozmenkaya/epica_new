@@ -192,14 +192,23 @@ def dashboard(request):
 				widget_data['recent_feedback'] = {'feedback': feedback}
 				
 			elif wtype == 'order_status':
-				status_counts = {}
+				# Optimized: Single query with aggregation instead of N queries
+				from django.db.models import Count
+				status_data = (
+					Order.objects
+					.filter(organization=org)
+					.values('status')
+					.annotate(count=Count('id'))
+				)
+				# Convert to dict with labels
+				status_counts = {
+					Order.Status(item['status']).label: item['count']
+					for item in status_data
+				}
+				# Add missing statuses with 0 count
 				for status_choice in Order.Status.choices:
-					status_code = status_choice[0]
-					count = Order.objects.filter(
-						organization=org,
-						status=status_code
-					).count()
-					status_counts[status_choice[1]] = count
+					if status_choice[1] not in status_counts:
+						status_counts[status_choice[1]] = 0
 				widget_data['order_status'] = {'status_counts': status_counts}
 		
 		context['widgets'] = user_widgets
@@ -1153,15 +1162,18 @@ def supplier_portal(request):
 	org = getattr(request, "tenant", None) or sup.organizations.first()
 	if org:
 		_set_tenant_session(request, org)
-	# Count tickets assigned to this supplier via rules (fallback to category.suppliers)
-	open_tickets = Ticket.objects.filter(organization=org, status=Ticket.Status.OPEN).select_related("category") if org else []
-	assigned_cnt = 0
-	for t in open_tickets:
-		try:
-			if t.assigned_suppliers.filter(id=sup.id).exists():
-				assigned_cnt += 1
-		except Exception:
-			continue
+	# Count tickets assigned to this supplier - optimized with prefetch
+	open_tickets = (
+		Ticket.objects
+		.filter(organization=org, status=Ticket.Status.OPEN)
+		.select_related("category")
+		.prefetch_related("assigned_suppliers")
+	) if org else []
+	
+	assigned_cnt = sum(
+		1 for t in open_tickets 
+		if sup.id in [s.id for s in t.assigned_suppliers.all()]
+	)
 	return render(request, "core/portal_supplier.html", {"supplier": sup, "org": org, "assigned_open_count": assigned_cnt})
 
 
@@ -1174,15 +1186,18 @@ def supplier_requests_list(request):
 	org = getattr(request, "tenant", None) or sup.organizations.first()
 	if org:
 		_set_tenant_session(request, org)
-	# Rule-based assignment: filter in Python since rules can't be expressed in ORM easily
-	all_tickets = Ticket.objects.filter(organization=org).select_related("category", "customer") if org else []
-	tickets = []
-	for t in all_tickets:
-		try:
-			if t.assigned_suppliers.filter(id=sup.id).exists():
-				tickets.append(t)
-		except Exception:
-			continue
+	# Rule-based assignment: optimized with prefetch instead of N+1 queries
+	all_tickets = (
+		Ticket.objects
+		.filter(organization=org)
+		.select_related("category", "customer")
+		.prefetch_related("assigned_suppliers")
+	) if org else []
+	
+	tickets = [
+		t for t in all_tickets 
+		if sup.id in [s.id for s in t.assigned_suppliers.all()]
+	]
 	return render(request, "core/portal_supplier_requests_list.html", {"tickets": tickets, "supplier": sup, "org": org})
 
 
@@ -3061,18 +3076,20 @@ def supplier_access_token(request, token: str):
 				currency=currency,
 			)
 			
-		# Create quote item with unit price
-		QuoteItem.objects.create(
-			quote=new_quote,
-			description=ticket.description or ticket.title,
-			quantity=qty,
-			unit_price=unit_price,
-		)
+			# Create quote item with unit price
+			QuoteItem.objects.create(
+				quote=new_quote,
+				description=ticket.description or ticket.title,
+				quantity=qty,
+				unit_price=unit_price,
+			)
 		
-	logger.info(f"New quote submitted by {supplier.name} for ticket #{ticket.id}: {total_amount} {currency}")
-	messages.success(request, "Teklifiniz alındı. Teşekkür ederiz!")
+			logger.info(f"New quote submitted by {supplier.name} for ticket #{ticket.id}: {total_amount} {currency}")
+			messages.success(request, "Teklifiniz alındı. Teşekkür ederiz!")
 	
-	return redirect(request.path + f"?email={sup_email}")	# Check if supplier already submitted a quote
+		return redirect(request.path + f"?email={sup_email}")
+	
+	# GET request - Check if supplier already submitted a quote
 	existing_quote = None
 	existing_unit_price = None
 	if supplier:
@@ -3092,12 +3109,12 @@ def supplier_access_token(request, token: str):
 			"ticket": ticket,
 			"extra_fields": extra_fields,
 			"supplier": supplier,
-		"supplier_email": supplier_email,
-		"existing_quote": existing_quote,
-		"existing_unit_price": existing_unit_price,
-		"organization": ticket.organization,
-	},
-)
+			"supplier_email": supplier_email,
+			"existing_quote": existing_quote,
+			"existing_unit_price": existing_unit_price,
+			"organization": ticket.organization,
+		},
+	)
 
 
 def customer_feedback_survey(request, token: str):
