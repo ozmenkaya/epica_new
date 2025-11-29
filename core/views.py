@@ -1162,11 +1162,18 @@ def customer_portal(request):
 
 @login_required
 def supplier_portal(request):
+	import logging
+	logger = logging.getLogger(__name__)
+	
 	sup = getattr(request.user, "supplier_profile", None)
+	logger.info(f"Supplier portal access - User: {request.user.username}, Supplier: {sup}")
+	
 	if not sup:
 		return redirect("home")
 	# Get organization from session or first organization
 	org = getattr(request, "tenant", None) or sup.organizations.first()
+	logger.info(f"Supplier portal - Org: {org}, Tenant from request: {getattr(request, 'tenant', None)}")
+	
 	if org:
 		_set_tenant_session(request, org)
 	# Count tickets assigned to this supplier - optimized with prefetch
