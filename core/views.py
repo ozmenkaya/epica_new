@@ -264,8 +264,10 @@ def role_landing(request):
 			request.session.modified = True  # Force Django to save session
 			org = Organization.objects.using('default').filter(slug=user_orgs[0]).first()
 		elif len(user_orgs) > 1:
-			# Multiple orgs - let user choose
-			return redirect("org_list")
+			# Multiple orgs - select first one by default, user can switch later
+			request.session["current_org"] = user_orgs[0]
+			request.session.modified = True
+			org = Organization.objects.using('default').filter(slug=user_orgs[0]).first()
 		else:
 			# No organizations - guide user to create one
 			from django.contrib import messages
