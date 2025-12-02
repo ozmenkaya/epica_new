@@ -47,7 +47,7 @@ class TenantMiddleware(MiddlewareMixin):
 class ForceLocaleMiddleware(MiddlewareMixin):
     """
     Force all requests to use Turkish locale.
-    Only redirect /en/ URLs to /tr/ - don't redirect paths that already have /tr/.
+    Redirect /tr/ and /en/ URLs to root paths without language prefix.
     """
     
     def process_request(self, request: HttpRequest):
@@ -55,10 +55,13 @@ class ForceLocaleMiddleware(MiddlewareMixin):
         translation.activate('tr')
         request.LANGUAGE_CODE = 'tr'
         
-        # Only redirect /en/ paths to /tr/ - leave everything else alone
-        if request.path.startswith('/en/'):
-            new_path = '/tr/' + request.path[4:]
+        # Redirect /tr/ and /en/ paths to root (remove language prefix)
+        if request.path.startswith('/tr/'):
+            new_path = request.path[3:]  # Remove /tr prefix
             return HttpResponsePermanentRedirect(new_path)
         
-        # No other redirects - let Django's i18n_patterns handle URL routing
+        if request.path.startswith('/en/'):
+            new_path = request.path[3:]  # Remove /en prefix
+            return HttpResponsePermanentRedirect(new_path)
+        
         return None
