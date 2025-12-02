@@ -260,6 +260,7 @@ def role_landing(request):
 		user_orgs = list(user_orgs)
 		if len(user_orgs) == 1:
 			request.session["current_org"] = user_orgs[0]
+			request.session.modified = True  # Force Django to save session
 			org = Organization.objects.using('default').filter(slug=user_orgs[0]).first()
 		elif len(user_orgs) > 1:
 			# Multiple orgs - let user choose
@@ -1125,6 +1126,7 @@ from django.contrib.auth.decorators import login_required
 
 def _set_tenant_session(request, org):
 	request.session["current_org"] = org.slug
+	request.session.modified = True  # Force Django to save session
 
 
 def _get_supplier_org(supplier, request):

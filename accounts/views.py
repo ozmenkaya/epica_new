@@ -93,6 +93,7 @@ def org_create(request):
 			org = Organization.objects.db_manager('default').create(name=name, owner=request.user)
 			Membership.objects.db_manager('default').create(user=request.user, organization=org, role=Membership.Role.OWNER)
 			request.session["current_org"] = org.slug
+			request.session.modified = True  # Force Django to save session
 			messages.success(request, f"{name} organizasyonu oluşturuldu")
 			return redirect("role_landing")
 		messages.error(request, "İsim gerekli")
@@ -108,6 +109,7 @@ def org_switch(request, slug: str):
 	
 	# Update session to set the new organization
 	request.session["current_org"] = org.slug
+	request.session.modified = True  # Force Django to save session
 	messages.success(request, f"{org.name} organizasyonuna geçildi")
 	return redirect("dashboard")
 
