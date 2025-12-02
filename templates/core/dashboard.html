@@ -293,7 +293,7 @@
 
 	{% else %}
 	<div class="alert alert-warning">
-		{% trans "Hiç organizasyon seçili değil." %} <a href="/accounts/orgs/">{% trans "Seç" %}</a>
+		{% trans "Hiç organizasyon seçili değil." %} <a href="{% url 'org_list' %}">{% trans "Seç" %}</a>
 	</div>
 	{% endif %}
 </div>

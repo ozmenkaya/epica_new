@@ -5,8 +5,8 @@
   <h1>Epica SaaS</h1>
   <p>{% trans "Çok-tenant destekli SaaS uygulamanız hazır." %}</p>
   <div>
-    <a role="button" href="/accounts/signup/">{% trans "Kayıt Ol" %}</a>
-    <a role="button" class="secondary" href="/accounts/login/">{% trans "Giriş" %}</a>
+    <a role="button" href="{% url 'signup' %}">{% trans "Kayıt Ol" %}</a>
+    <a role="button" class="secondary" href="{% url 'login' %}">{% trans "Giriş" %}</a>
   </div>
   <p><small>{% blocktrans %}Yönetim için <a href="/admin/">Admin</a> panelini kullanabilirsiniz.{% endblocktrans %}</small></p>
 </section>

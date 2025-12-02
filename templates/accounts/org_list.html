@@ -4,7 +4,7 @@
 <div class="card shadow-sm">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h5 class="mb-0">{% trans "Organizasyonlarım" %}</h5>
-    <a class="btn btn-sm btn-primary" href="/accounts/orgs/create/">{% trans "Yeni organizasyon" %}</a>
+    <a class="btn btn-sm btn-primary" href="{% url 'org_create' %}">{% trans "Yeni organizasyon" %}</a>
   </div>
   <div class="card-body">
     {% if current %}
@@ -25,7 +25,7 @@
               <td class="fw-medium">{{ org.name }}</td>
               <td><code>{{ org.slug }}</code></td>
               <td class="text-end">
-                <a class="btn btn-sm btn-outline-primary me-1" href="/accounts/orgs/switch/{{ org.slug }}/">{% trans "Geç" %}</a>
+                <a class="btn btn-sm btn-outline-primary me-1" href="{% url 'org_switch' org.slug %}">{% trans "Geç" %}</a>
                 {% if org.owner == request.user %}
                 <a class="btn btn-sm btn-outline-info me-1" href="{% url 'org_members' org.id %}" title="{% trans 'Kullanıcılar' %}">
                   <i class="bi bi-people"></i> {% trans "Kullanıcılar" %}
