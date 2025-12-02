@@ -257,13 +257,13 @@ CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in 
 
 # Role-based landing
 ROLE_LANDING_MAP = {
-    # enum roles
-    'owner': '/dashboard/',
-    'admin': '/dashboard/',
-    'member': '/',
+    # enum roles (use URL names for i18n support)
+    'owner': 'dashboard',
+    'admin': 'dashboard',
+    'member': 'home',
     # custom Role.key examples
-    'editor': '/dashboard/',
-    'viewer': '/',
+    'editor': 'dashboard',
+    'viewer': 'home',
 }
 
 # Auth redirects
