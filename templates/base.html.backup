@@ -65,7 +65,7 @@
           </ul>
           <ul class="navbar-nav ms-auto align-items-center gap-2">
             <li class="nav-item">
-              {# {% include "_language_switcher.html" %} #}
+              {% include "_language_switcher.html" %}
             </li>
             {% if request.user.is_authenticated %}
               <li class="nav-item">

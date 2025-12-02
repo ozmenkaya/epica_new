@@ -41,3 +41,27 @@ class TenantMiddleware(MiddlewareMixin):
         if tenant:
             from core.db_router import set_tenant_db_for_request
             set_tenant_db_for_request(request)
+
+
+class ForceLocaleMiddleware(MiddlewareMixin):
+    """
+    Force all requests to use Turkish locale.
+    Redirect /en/ to /tr/ to prevent language-based session loss.
+    """
+    
+    def process_request(self, request: HttpRequest):
+        from django.shortcuts import redirect
+        from django.utils import translation
+        
+        # Force Turkish locale
+        translation.activate('tr')
+        request.LANGUAGE_CODE = 'tr'
+        
+        # Redirect /en/ paths to /tr/
+        if request.path.startswith('/en/'):
+            new_path = '/tr/' + request.path[4:]
+            return redirect(new_path)
+        
+        # If path doesn't start with /tr/ or /i18n/, redirect to /tr/
+        if not request.path.startswith(('/tr/', '/i18n/', '/static/', '/media/')):
+            return redirect('/tr' + request.path)
