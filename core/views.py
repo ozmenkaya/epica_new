@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from accounts.permissions import tenant_member_required, tenant_role_required, page_permission_required
 from django.conf import settings
-from accounts.models import Membership
+from accounts.models import Membership, Organization
 from .models import Customer, Supplier, Category, Ticket
 from .models import Customer, Supplier, Category, Ticket, TicketAttachment, Quote, SupplierProduct, QuoteItem, OwnerQuoteAdjustment, CategoryFormField, CategorySupplierRule, UserDashboardWidget
 from django.db import models

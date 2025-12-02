@@ -33,22 +33,23 @@ def login_view(request):
 			if sup:
 				return redirect("supplier_portal")
 
-			# For regular users, check if they have any organizations
+			# For regular users with organizations, use role landing
 			user_orgs = Membership.objects.using('default').filter(user=user).select_related("organization")
 			if user_orgs.exists():
-				# User has organizations, use default portal flow
-				return redirect("portal_home")
+				# User has organizations, use role landing to determine destination
+				return redirect("role_landing")
 			else:
 				# No organizations - guide user to create one
 				messages.info(request, "Hoş geldiniz! Devam etmek için bir organizasyon oluşturun.")
 				return redirect("org_create")
-		messages.error(request, "Kullanıcı adı veya şifre hatalı")
+		else:
+			messages.error(request, "Kullanıcı adı veya şifre hatalı")
 	else:
 		form = AuthenticationForm(request)
 	return render(request, "accounts/login.html", {"form": form})
 def logout_view(request):
 	logout(request)
-	return redirect("role_landing")
+	return redirect("home")
 
 
 def signup_view(request):
@@ -57,8 +58,11 @@ def signup_view(request):
 		if form.is_valid():
 			user = form.save()
 			login(request, user)
-			return redirect("portal_home")
-		messages.error(request, "Kayıt başarısız")
+			# After signup, redirect to organization creation
+			messages.info(request, "Kayıt başarılı! Devam etmek için bir organizasyon oluşturun.")
+			return redirect("org_create")
+		else:
+			messages.error(request, "Kayıt başarısız. Lütfen formu kontrol edin.")
 	else:
 		form = UserCreationForm()
 	return render(request, "accounts/signup.html", {"form": form})
