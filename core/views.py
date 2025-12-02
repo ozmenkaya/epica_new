@@ -28,6 +28,7 @@ def home(request):
 
 @page_permission_required('dashboard')
 def dashboard(request):
+	logger.info(f"Dashboard view called - User: {request.user.username}, Tenant: {getattr(request, 'tenant', None)}")
 	org = getattr(request, "tenant", None)
 	context = {"org": org}
 	
