@@ -13,30 +13,39 @@ def login_view(request):
 		if form.is_valid():
 			user = form.get_user()
 			login(request, user)
-			
+
 			# Check for ?next= parameter first
 			next_url = request.GET.get("next") or request.POST.get("next")
 			if next_url:
 				return redirect(next_url)
-			
+
+			# If user is a staff/superuser, go to admin
+			if user.is_staff or user.is_superuser:
+				return redirect("/admin/")
+
 			# If user is a customer, go to customer portal
 			cust = getattr(user, 'customer_profile', None)
 			if cust:
 				return redirect("customer_portal")
-			
+
 			# If user is a supplier, go to supplier portal
 			sup = getattr(user, 'supplier_profile', None)
 			if sup:
 				return redirect("supplier_portal")
-			
-			# Otherwise use default portal flow
-			return redirect("portal_home")
+
+			# For regular users, check if they have any organizations
+			user_orgs = Membership.objects.using('default').filter(user=user).select_related("organization")
+			if user_orgs.exists():
+				# User has organizations, use default portal flow
+				return redirect("portal_home")
+			else:
+				# No organizations - guide user to create one
+				messages.info(request, "Hoş geldiniz! Devam etmek için bir organizasyon oluşturun.")
+				return redirect("org_create")
 		messages.error(request, "Kullanıcı adı veya şifre hatalı")
 	else:
 		form = AuthenticationForm(request)
 	return render(request, "accounts/login.html", {"form": form})
-
-
 def logout_view(request):
 	logout(request)
 	return redirect("role_landing")
@@ -58,18 +67,33 @@ def signup_view(request):
 @backoffice_only
 def org_list(request):
 	orgs = Organization.objects.using('default').filter(memberships__user=request.user).distinct()
+	
+	# If user has no organizations, redirect to create one
+	if not orgs.exists():
+		messages.info(request, "Henüz bir organizasyonunuz yok. Lütfen bir organizasyon oluşturun.")
+		return redirect("org_create")
+	
 	current = getattr(request, "tenant", None)
 	return render(request, "accounts/org_list.html", {"orgs": orgs, "current": current})
 
 
-@backoffice_only
+@login_required
 def org_create(request):
+	# Allow portal users (customer/supplier) to access if they have no org
+	# but prevent them if they already have portal access
+	cust = getattr(request.user, 'customer_profile', None)
+	sup = getattr(request.user, 'supplier_profile', None)
+	if cust or sup:
+		messages.error(request, "Portal kullanıcıları organizasyon oluşturamaz")
+		return redirect("home")
+	
 	if request.method == "POST":
 		name = request.POST.get("name", "").strip()
 		if name:
 			org = Organization.objects.db_manager('default').create(name=name, owner=request.user)
 			Membership.objects.db_manager('default').create(user=request.user, organization=org, role=Membership.Role.OWNER)
 			request.session["current_org"] = org.slug
+			messages.success(request, f"{name} organizasyonu oluşturuldu")
 			return redirect("role_landing")
 		messages.error(request, "İsim gerekli")
 	return render(request, "accounts/org_create.html")

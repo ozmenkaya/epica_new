@@ -261,8 +261,14 @@ def role_landing(request):
 		if len(user_orgs) == 1:
 			request.session["current_org"] = user_orgs[0]
 			org = Organization.objects.using('default').filter(slug=user_orgs[0]).first()
-		else:
+		elif len(user_orgs) > 1:
+			# Multiple orgs - let user choose
 			return redirect("org_list")
+		else:
+			# No organizations - guide user to create one
+			from django.contrib import messages
+			messages.info(request, "Devam etmek için bir organizasyon oluşturun.")
+			return redirect("org_create")
 
 	mem = Membership.objects.using('default').filter(user=request.user, organization=org).select_related("role_fk").first()
 	if not mem:
