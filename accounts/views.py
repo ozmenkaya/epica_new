@@ -49,11 +49,14 @@ def login_view(request):
 			
 			# Handle "Remember Me" functionality
 			remember_me = request.POST.get('remember_me')
+			logger.info(f"Login - Remember Me value: '{remember_me}' (type: {type(remember_me).__name__})")
 			if not remember_me:
 				# If not checked, expire session when browser closes
+				logger.warning(f"Remember Me NOT checked - session will expire on browser close")
 				request.session.set_expiry(0)
 			else:
 				# If checked, use the default SESSION_COOKIE_AGE (2 weeks)
+				logger.info(f"Remember Me checked - session will last 2 weeks")
 				request.session.set_expiry(None)
 			
 			# Determine redirect destination
