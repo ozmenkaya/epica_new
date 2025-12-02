@@ -64,12 +64,12 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     # i18n: LocaleMiddleware must be after Session and before Common
     'django.middleware.locale.LocaleMiddleware',
-    'core.middleware.TenantMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'core.middleware.TenantMiddleware',  # After Auth to access request.user
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 

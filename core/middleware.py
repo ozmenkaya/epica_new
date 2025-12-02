@@ -18,7 +18,7 @@ class TenantMiddleware(MiddlewareMixin):
     """
 
     def process_request(self, request: HttpRequest):
-        # Debug: log session info for authenticated users
+        # Debug: log all requests for troubleshooting
         user = getattr(request, 'user', None)
         if user and getattr(user, 'is_authenticated', False):
             session_key = request.session.session_key
