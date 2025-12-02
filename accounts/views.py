@@ -3,68 +3,199 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.debug import sensitive_post_parameters
 from .permissions import backoffice_only
 from .models import Organization, Membership
+import logging
+
+logger = logging.getLogger(__name__)
 
 
+@sensitive_post_parameters('password')
+@csrf_protect
+@never_cache
 def login_view(request):
+	"""
+	Secure login view with comprehensive user routing.
+	
+	Routing priority:
+	1. ?next parameter (if safe)
+	2. Staff/Superuser -> Django Admin
+	3. Customer profile -> Customer Portal
+	4. Supplier profile -> Supplier Portal
+	5. Organization member -> Role-based landing
+	6. No organization -> Organization creation
+	"""
+	# Redirect if already authenticated
+	if request.user.is_authenticated:
+		return _redirect_authenticated_user(request.user, request)
+	
 	if request.method == "POST":
 		form = AuthenticationForm(request, data=request.POST)
 		if form.is_valid():
 			user = form.get_user()
+			
+			# Check if user account is active
+			if not user.is_active:
+				messages.error(request, "Bu hesap devre dışı bırakılmış.")
+				logger.warning(f"Inactive user login attempt: {user.username}")
+				return render(request, "accounts/login.html", {"form": form})
+			
+			# Perform login
 			login(request, user)
-
-			# Check for ?next= parameter first
-			next_url = request.GET.get("next") or request.POST.get("next")
-			if next_url:
-				return redirect(next_url)
-
-			# If user is a staff/superuser, go to admin
-			if user.is_staff or user.is_superuser:
-				return redirect("/admin/")
-
-			# If user is a customer, go to customer portal
-			cust = getattr(user, 'customer_profile', None)
-			if cust:
-				return redirect("customer_portal")
-
-			# If user is a supplier, go to supplier portal
-			sup = getattr(user, 'supplier_profile', None)
-			if sup:
-				return redirect("supplier_portal")
-
-			# For regular users with organizations, use role landing
-			user_orgs = Membership.objects.using('default').filter(user=user).select_related("organization")
-			if user_orgs.exists():
-				# User has organizations, use role landing to determine destination
-				return redirect("role_landing")
+			logger.info(f"User logged in successfully: {user.username}")
+			
+			# Handle "Remember Me" functionality
+			remember_me = request.POST.get('remember_me')
+			if not remember_me:
+				# If not checked, expire session when browser closes
+				request.session.set_expiry(0)
 			else:
-				# No organizations - guide user to create one
-				messages.info(request, "Hoş geldiniz! Devam etmek için bir organizasyon oluşturun.")
-				return redirect("org_create")
+				# If checked, use the default SESSION_COOKIE_AGE (2 weeks)
+				request.session.set_expiry(None)
+			
+			# Determine redirect destination
+			return _redirect_authenticated_user(user, request)
 		else:
-			messages.error(request, "Kullanıcı adı veya şifre hatalı")
+			# Log failed login attempts
+			username = request.POST.get('username', '')
+			logger.warning(f"Failed login attempt for username: {username}")
+			messages.error(request, "Kullanıcı adı veya şifre hatalı. Lütfen tekrar deneyin.")
 	else:
 		form = AuthenticationForm(request)
+	
 	return render(request, "accounts/login.html", {"form": form})
+
+
+def _redirect_authenticated_user(user, request):
+	"""
+	Determine where to redirect an authenticated user based on their profile.
+	
+	Args:
+		user: The authenticated User object
+		request: The HTTP request object
+	
+	Returns:
+		HttpResponseRedirect to the appropriate destination
+	"""
+	# 1. Check for safe next parameter
+	next_url = request.GET.get("next") or request.POST.get("next")
+	if next_url and _is_safe_url(next_url, request):
+		return redirect(next_url)
+	
+	# 2. Staff/Superuser -> Django Admin
+	if user.is_staff or user.is_superuser:
+		logger.info(f"Redirecting staff user {user.username} to admin")
+		return redirect("/admin/")
+	
+	# 3. Customer profile -> Customer Portal
+	customer_profile = getattr(user, 'customer_profile', None)
+	if customer_profile is not None:
+		logger.info(f"Redirecting customer {user.username} to customer portal")
+		# Set organization in session
+		request.session["current_org"] = customer_profile.organization.slug
+		return redirect("customer_portal")
+	
+	# 4. Supplier profile -> Supplier Portal
+	supplier_profile = getattr(user, 'supplier_profile', None)
+	if supplier_profile is not None:
+		logger.info(f"Redirecting supplier {user.username} to supplier portal")
+		# Set first organization in session if available
+		first_org = supplier_profile.organizations.first()
+		if first_org:
+			request.session["current_org"] = first_org.slug
+		return redirect("supplier_portal")
+	
+	# 5. Organization member -> Check organizations
+	user_memberships = Membership.objects.using('default').filter(
+		user=user
+	).select_related("organization")
+	
+	if user_memberships.exists():
+		# User has organization access - use role landing
+		logger.info(f"Redirecting organization member {user.username} to role landing")
+		return redirect("role_landing")
+	
+	# 6. No organization -> Guide to create one
+	logger.info(f"New user {user.username} with no organization - redirecting to org creation")
+	messages.info(request, "Hoş geldiniz! Devam etmek için bir organizasyon oluşturun.")
+	return redirect("org_create")
+
+
+def _is_safe_url(url, request):
+	"""
+	Check if a redirect URL is safe to prevent open redirect vulnerabilities.
+	
+	Args:
+		url: The URL to check
+		request: The HTTP request object
+	
+	Returns:
+		bool: True if URL is safe, False otherwise
+	"""
+	from django.utils.http import url_has_allowed_host_and_scheme
+	
+	# Get allowed hosts from settings
+	from django.conf import settings
+	allowed_hosts = settings.ALLOWED_HOSTS
+	
+	# Check if URL is safe
+	return url_has_allowed_host_and_scheme(
+		url=url,
+		allowed_hosts=allowed_hosts,
+		require_https=request.is_secure()
+	)
+@login_required
+@never_cache
 def logout_view(request):
+	"""
+	Secure logout view that clears session and redirects to home.
+	"""
+	username = request.user.username if request.user.is_authenticated else "Unknown"
 	logout(request)
+	logger.info(f"User logged out: {username}")
+	messages.success(request, "Başarıyla çıkış yaptınız.")
 	return redirect("home")
 
 
+@sensitive_post_parameters('password1', 'password2')
+@csrf_protect
+@never_cache
 def signup_view(request):
+	"""
+	User registration view.
+	After successful signup, user is logged in and redirected to create an organization.
+	"""
+	# Redirect if already authenticated
+	if request.user.is_authenticated:
+		messages.info(request, "Zaten giriş yapmışsınız.")
+		return redirect("role_landing")
+	
 	if request.method == "POST":
 		form = UserCreationForm(request.POST)
 		if form.is_valid():
+			# Create user account
 			user = form.save()
+			username = user.username
+			
+			# Log the user in automatically
 			login(request, user)
-			# After signup, redirect to organization creation
-			messages.info(request, "Kayıt başarılı! Devam etmek için bir organizasyon oluşturun.")
+			logger.info(f"New user registered and logged in: {username}")
+			
+			# Guide to create organization
+			messages.success(request, f"Hoş geldiniz {username}! Devam etmek için bir organizasyon oluşturun.")
 			return redirect("org_create")
 		else:
-			messages.error(request, "Kayıt başarısız. Lütfen formu kontrol edin.")
+			# Show specific validation errors
+			for field, errors in form.errors.items():
+				for error in errors:
+					messages.error(request, f"{form.fields.get(field).label if field != '__all__' else 'Hata'}: {error}")
+			logger.warning(f"Failed signup attempt with errors: {form.errors}")
 	else:
 		form = UserCreationForm()
+	
 	return render(request, "accounts/signup.html", {"form": form})
 
 

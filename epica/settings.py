@@ -186,6 +186,9 @@ LANGUAGE_COOKIE_HTTPONLY = False
 LANGUAGE_COOKIE_SAMESITE = 'Lax'
 
 # Session cookie settings
+SESSION_COOKIE_AGE = 1209600  # 2 weeks (in seconds)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session after browser close
+SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request
 SESSION_COOKIE_SECURE = not DEBUG  # Only send over HTTPS in production
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
 SESSION_COOKIE_SAMESITE = 'Lax'
