@@ -1,6 +1,7 @@
 from typing import Optional
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponsePermanentRedirect
 from django.utils.deprecation import MiddlewareMixin
+from django.utils import translation
 from accounts.models import Organization, Membership
 import logging
 
@@ -46,22 +47,18 @@ class TenantMiddleware(MiddlewareMixin):
 class ForceLocaleMiddleware(MiddlewareMixin):
     """
     Force all requests to use Turkish locale.
-    Redirect /en/ to /tr/ to prevent language-based session loss.
+    Only redirect /en/ URLs to /tr/ - don't redirect paths that already have /tr/.
     """
     
     def process_request(self, request: HttpRequest):
-        from django.shortcuts import redirect
-        from django.utils import translation
-        
-        # Force Turkish locale
+        # Always activate Turkish locale
         translation.activate('tr')
         request.LANGUAGE_CODE = 'tr'
         
-        # Redirect /en/ paths to /tr/
+        # Only redirect /en/ paths to /tr/ - leave everything else alone
         if request.path.startswith('/en/'):
             new_path = '/tr/' + request.path[4:]
-            return redirect(new_path)
+            return HttpResponsePermanentRedirect(new_path)
         
-        # If path doesn't start with /tr/ or /i18n/, redirect to /tr/
-        if not request.path.startswith(('/tr/', '/i18n/', '/static/', '/media/')):
-            return redirect('/tr' + request.path)
+        # No other redirects - let Django's i18n_patterns handle URL routing
+        return None
