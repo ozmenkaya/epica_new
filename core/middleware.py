@@ -47,21 +47,27 @@ class TenantMiddleware(MiddlewareMixin):
 class ForceLocaleMiddleware(MiddlewareMixin):
     """
     Force all requests to use Turkish locale.
-    Redirect /tr/ and /en/ URLs to root paths without language prefix.
+    Redirect old /tr/ and /en/ URLs to root paths (for bookmarks/old links).
     """
     
     def process_request(self, request: HttpRequest):
-        # Always activate Turkish locale
+        # Always activate Turkish locale (no redirect, just set language)
         translation.activate('tr')
         request.LANGUAGE_CODE = 'tr'
         
-        # Redirect /tr/ and /en/ paths to root (remove language prefix)
+        # Only redirect if path explicitly starts with /tr/ or /en/
+        # This handles old bookmarks and links
         if request.path.startswith('/tr/'):
             new_path = request.path[3:]  # Remove /tr prefix
+            if not new_path:  # If it was just /tr/, redirect to /
+                new_path = '/'
             return HttpResponsePermanentRedirect(new_path)
         
         if request.path.startswith('/en/'):
             new_path = request.path[3:]  # Remove /en prefix
+            if not new_path:  # If it was just /en/, redirect to /
+                new_path = '/'
             return HttpResponsePermanentRedirect(new_path)
         
+        # No redirect for normal paths - just set language
         return None
