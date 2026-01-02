@@ -1097,14 +1097,15 @@ def suppliers_edit(request, pk: int):
 			else:
 				messages.success(request, f"Tedarikçi '{sup.name}' güncellendi.")
 			return redirect("suppliers_list")
+		else:
+			# Show form errors
+			for field, errors in form.errors.items():
+				for error in errors:
+					messages.error(request, f"{field}: {error}")
 	else:
-		# Show form errors
-		for field, errors in form.errors.items():
-			for error in errors:
-				messages.error(request, f"{field}: {error}")
+		# GET request - initialize form
+		form = SupplierForm(instance=obj)
 	
-	org = getattr(request, "tenant", None)
-	obj = get_object_or_404(Supplier, pk=pk, organizations=org)
 	return render(request, "core/suppliers_form.html", {"form": form, "obj": obj, "org": org})
 
 
