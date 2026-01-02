@@ -1097,23 +1097,21 @@ def suppliers_edit(request, pk: int):
 			else:
 				messages.success(request, f"Tedarikçi '{sup.name}' güncellendi.")
 			return redirect("suppliers_list")
-		else:
+	else:
 		# Show form errors
 		for field, errors in form.errors.items():
 			for error in errors:
 				messages.error(request, f"{field}: {error}")
+	
 	org = getattr(request, "tenant", None)
 	obj = get_object_or_404(Supplier, pk=pk, organizations=org)
-	if request.method == "POST":
-		name = obj.name
-		# Remove organization from supplier (or delete if last org)
-		obj.organizations.remove(org)
-		if not obj.organizations.exists():
-			obj.delete()
-			messages.success(request, f"Tedarikçi '{name}' tamamen silindi.")
-		else:
-			messages.success(request, f"Tedarikçi '{name}' bu organizasyondan kaldırıldı.")
-		return redirect("suppliers_list")
+	return render(request, "core/suppliers_form.html", {"form": form, "obj": obj, "org": org})
+
+
+@page_permission_required('suppliers_delete')
+def suppliers_delete(request, pk: int):
+	org = getattr(request, "tenant", None)
+	obj = get_object_or_404(Supplier, pk=pk, organizations=org)
 	return render(request, "core/suppliers_confirm_delete.html", {"obj": obj, "org": org})
 
 
