@@ -35,7 +35,16 @@
             <tr>
               <td>
                 <i class="bi bi-person-circle"></i> 
-                <strong>{{ member.user.username }}</strong>
+                <strong>
+                  {% if member.user.first_name or member.user.last_name %}
+                    {{ member.user.get_full_name }}
+                  {% else %}
+                    {{ member.user.username }}
+                  {% endif %}
+                </strong>
+                {% if member.user.first_name or member.user.last_name %}
+                  <br><small class="text-muted">@{{ member.user.username }}</small>
+                {% endif %}
                 {% if member.user == org.owner %}
                   <span class="badge bg-primary">{% trans "Sahip" %}</span>
                 {% endif %}

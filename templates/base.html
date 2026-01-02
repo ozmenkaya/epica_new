@@ -12,7 +12,7 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container-fluid">
-  <a class="navbar-brand" href="{% url 'home' %}">Epica</a>
+        <a class="navbar-brand" href="{% url 'home' %}">Epica</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav" aria-controls="topnav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -20,6 +20,7 @@
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             {% if request.user.is_authenticated %}
               {% if request.user.customer_profile or request.user.supplier_profile %}
+                {# Portal users - Customer/Supplier #}
                 {% if request.user.customer_profile %}
                   <li class="nav-item"><a class="nav-link" href="{% url 'customer_portal' %}">{% trans "Müşteri Portalım" %}</a></li>
                   <li class="nav-item"><a class="nav-link" href="{% url 'customer_requests_list' %}">{% trans "Taleplerim" %}</a></li>
@@ -35,30 +36,65 @@
                   <li class="nav-item"><a class="nav-link" href="{% url 'supplier_products_list' %}">{% trans "Ürünlerim" %}</a></li>
                 {% endif %}
               {% else %}
+                {# Backoffice users - Organization members #}
                 <li class="nav-item"><a class="nav-link" href="{% url 'org_list' %}">{% trans "Organizasyonlar" %}</a></li>
+                
+                {# Dashboard - always visible if has permission #}
+                {% if 'dashboard' in tenant_permissions %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">{% trans "Dashboard" %}</a></li>
+                {% endif %}
+                
+                {# Customers #}
+                {% if 'customers_list' in tenant_permissions %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'customers_list' %}">{% trans "Müşteriler" %}</a></li>
-                {% if tenant_is_owner %}
-                  <li class="nav-item"><a class="nav-link" href="{% url 'categories_list' %}">{% trans "Kategoriler" %}</a></li>
-                  <li class="nav-item"><a class="nav-link" href="{% url 'tickets_list' %}">{% trans "Talepler" %}</a></li>
-                  <li class="nav-item"><a class="nav-link" href="{% url 'offers_list' %}">{% trans "Teklifler" %}</a></li>
-                  <li class="nav-item"><a class="nav-link" href="{% url 'owner_products_list' %}">{% trans "Ürünler" %}</a></li>
-                  <li class="nav-item"><a class="nav-link" href="{% url 'orders_list' %}">{% trans "Siparişler" %}</a></li>
                 {% endif %}
+                
+                {# Categories #}
+                {% if 'categories_list' in tenant_permissions %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'categories_list' %}">{% trans "Kategoriler" %}</a></li>
+                {% endif %}
+                
+                {# Tickets/Requests #}
+                {% if 'tickets_list' in tenant_permissions %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'tickets_list' %}">{% trans "Talepler" %}</a></li>
+                {% endif %}
+                
+                {# Offers #}
+                {% if 'offers_list' in tenant_permissions %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'offers_list' %}">{% trans "Teklifler" %}</a></li>
+                {% endif %}
+                
+                {# Products #}
+                {% if 'products_list' in tenant_permissions %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'owner_products_list' %}">{% trans "Ürünler" %}</a></li>
+                {% endif %}
+                
+                {# Orders #}
+                {% if 'orders_list' in tenant_permissions %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'orders_list' %}">{% trans "Siparişler" %}</a></li>
+                {% endif %}
+                
+                {# Suppliers #}
+                {% if 'suppliers_list' in tenant_permissions %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'suppliers_list' %}">{% trans "Tedarikçiler" %}</a></li>
-                {% if tenant_is_member %}
-                  <li class="nav-item"><a class="nav-link" href="{% url 'ai_assistant:chat' %}"><i class="bi bi-robot"></i> {% trans "AI Asistan" %}</a></li>
                 {% endif %}
-                {% if tenant_is_owner %}
-                  <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="settingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                      <i class="bi bi-gear-fill"></i> {% trans "Ayarlar" %}
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown">
-                      <li><a class="dropdown-item" href="{% url 'ai_assistant:stats' %}"><i class="bi bi-graph-up"></i> {% trans "AI İstatistikler" %}</a></li>
-                      <li><a class="dropdown-item" href="{% url 'ai_assistant:settings' %}"><i class="bi bi-sliders"></i> {% trans "AI Ayarlar" %}</a></li>
-                    </ul>
-                  </li>
+                
+                {# AI Assistant - for all members #}
+                {% if tenant_is_member %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'ai_assistant:chat' %}"><i class="bi bi-robot"></i> {% trans "AI Asistan" %}</a></li>
+                {% endif %}
+                
+                {# Settings dropdown - for owners or users with settings permission #}
+                {% if tenant_is_owner or 'settings' in tenant_permissions %}
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="settingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-gear-fill"></i> {% trans "Ayarlar" %}
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown">
+                    <li><a class="dropdown-item" href="{% url 'ai_assistant:stats' %}"><i class="bi bi-graph-up"></i> {% trans "AI İstatistikler" %}</a></li>
+                    <li><a class="dropdown-item" href="{% url 'ai_assistant:settings' %}"><i class="bi bi-sliders"></i> {% trans "AI Ayarlar" %}</a></li>
+                  </ul>
+                </li>
                 {% endif %}
               {% endif %}
             {% endif %}
@@ -71,6 +107,9 @@
               <li class="nav-item">
                 <span class="navbar-text text-white-50 me-2">
                   <i class="bi bi-person-circle"></i> {{ request.user.username }}
+                  {% if tenant_membership %}
+                  <small class="text-muted">({{ tenant_membership.get_role_display }})</small>
+                  {% endif %}
                 </span>
               </li>
               <li class="nav-item"><a class="nav-link btn btn-sm btn-outline-light" href="{% url 'logout' %}">{% trans "Çıkış" %}</a></li>
@@ -95,7 +134,7 @@
           setTimeout(function() {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
-          }, 5000); // 5 saniye sonra kaybol
+          }, 5000);
         });
       });
     </script>

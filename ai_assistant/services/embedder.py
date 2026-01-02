@@ -74,12 +74,6 @@ class EmbeddingService:
             f"Description: {ticket.description}",
         ]
         
-        if ticket.solution:
-            parts.append(f"Solution: {ticket.solution}")
-        
-        if ticket.internal_note:
-            parts.append(f"Internal Note: {ticket.internal_note}")
-        
         return "\n".join(parts)
     
     def prepare_quote_text(self, quote) -> str:

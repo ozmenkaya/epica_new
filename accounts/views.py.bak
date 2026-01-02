@@ -363,8 +363,6 @@ def org_member_add(request, pk: int):
 	if request.method == "POST":
 		username_or_email = request.POST.get("username_or_email", "").strip()
 		email_input = request.POST.get("email", "").strip()
-		first_name_input = request.POST.get("first_name", "").strip()
-		last_name_input = request.POST.get("last_name", "").strip()
 		password_input = request.POST.get("password", "").strip()
 		role = request.POST.get("role", Membership.Role.MEMBER)
 		create_if_not_exists = request.POST.get("create_if_not_exists") == "1"
@@ -406,13 +404,6 @@ def org_member_add(request, pk: int):
 				
 				# Create user (always in default database)
 				user = User.objects.db_manager('default').create_user(username=username, email=email, password=password)
-				# Set first_name and last_name if provided
-				if first_name_input:
-					user.first_name = first_name_input
-				if last_name_input:
-					user.last_name = last_name_input
-				if first_name_input or last_name_input:
-					user.save(using='default')
 				messages.success(request, f"Yeni kullanıcı oluşturuldu: {username} (Şifre: {password})")
 			else:
 				messages.error(request, f"'{username_or_email}' kullanıcısı bulunamadı")
@@ -429,17 +420,6 @@ def org_member_add(request, pk: int):
 			user.email = email_input
 			user.save(using='default')
 			messages.info(request, f"{user.username} kullanıcısının e-posta adresi güncellendi")
-		
-		# Update first_name and last_name if provided
-		if first_name_input and user.first_name != first_name_input:
-			user.first_name = first_name_input
-			user.save(using='default')
-			messages.info(request, f"{user.username} kullanıcısının adı güncellendi")
-		
-		if last_name_input and user.last_name != last_name_input:
-			user.last_name = last_name_input
-			user.save(using='default')
-			messages.info(request, f"{user.username} kullanıcısının soyadı güncellendi")
 		
 		# Update password if provided
 		if password_input:
@@ -458,23 +438,9 @@ def org_member_add(request, pk: int):
 		# Create membership (always in default database)
 		membership = Membership.objects.db_manager('default').create(user=user, organization=org, role=role)
 		
-		# Set custom permissions
-		# Calculate which permissions are denied (unchecked but in role defaults)
-		from .permissions_config import ROLE_DEFAULT_PERMISSIONS
-		role_defaults = set(ROLE_DEFAULT_PERMISSIONS.get(role, []))
-		selected_perms = set(permissions_input)
-		
-		# Denied = role defaults that were unchecked
-		denied_perms = list(role_defaults - selected_perms)
-		# Allowed = selected perms that are NOT in role defaults (extras)
-		allowed_perms = list(selected_perms - role_defaults)
-		
-		if allowed_perms or denied_perms:
-			membership.custom_permissions = {}
-			if allowed_perms:
-				membership.custom_permissions["allowed"] = allowed_perms
-			if denied_perms:
-				membership.custom_permissions["denied"] = denied_perms
+		# Set custom permissions if provided
+		if permissions_input:
+			membership.custom_permissions = {"allowed": permissions_input}
 			membership.save(using='default')
 		
 		messages.success(request, f"{user.username} organizasyona eklendi")
@@ -503,8 +469,6 @@ def org_member_edit(request, pk: int, member_id: int):
 	
 	if request.method == "POST":
 		new_role = request.POST.get("role")
-		first_name_input = request.POST.get("first_name", "").strip()
-		last_name_input = request.POST.get("last_name", "").strip()
 		permissions_input = request.POST.getlist("permissions")
 		new_password = request.POST.get("new_password", "").strip()
 		
@@ -513,35 +477,16 @@ def org_member_edit(request, pk: int, member_id: int):
 			messages.error(request, "Sahip rolü değiştirilemez")
 			return redirect("org_members", pk=pk)
 		
-		# Update user first_name and last_name
-		if first_name_input != member.user.first_name:
-			member.user.first_name = first_name_input
-			member.user.save(using='default')
-		
-		if last_name_input != member.user.last_name:
-			member.user.last_name = last_name_input
-			member.user.save(using='default')
-		
 		member.role = new_role
 		
 		# Update custom permissions
-		# Calculate which permissions are denied (unchecked but in role defaults)
-		from .permissions_config import ROLE_DEFAULT_PERMISSIONS
-		role_defaults = set(ROLE_DEFAULT_PERMISSIONS.get(new_role, []))
-		selected_perms = set(permissions_input)
-		
-		# Denied = role defaults that were unchecked
-		denied_perms = list(role_defaults - selected_perms)
-		# Allowed = selected perms that are NOT in role defaults (extras)
-		allowed_perms = list(selected_perms - role_defaults)
-		
-		member.custom_permissions = {}
-		if allowed_perms:
-			member.custom_permissions["allowed"] = allowed_perms
-		if denied_perms:
-			member.custom_permissions["denied"] = denied_perms
+		if permissions_input:
+			member.custom_permissions = {"allowed": permissions_input}
+		else:
+			member.custom_permissions = {}
 		
 		member.save(using='default')
+		
 		# Update password if provided
 		if new_password:
 			member.user.set_password(new_password)

@@ -291,10 +291,10 @@ def send_order_completed_survey_email(order):
     """
     # Get customer email from ticket's created_by user
     ticket = order.ticket
-    if not ticket or not ticket.created_by:
+    if not ticket or not ticket.customer.user:
         return False
     
-    customer_email = ticket.created_by.email
+    customer_email = ticket.customer.user.email
     if not customer_email:
         return False
     

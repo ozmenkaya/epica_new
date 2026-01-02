@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("cookie-test/", views.cookie_test, name="cookie_test"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("dashboard/widgets/", views.dashboard_widgets_settings, name="dashboard_widgets_settings"),
     path("landing/", views.role_landing, name="role_landing"),
@@ -73,4 +74,13 @@ urlpatterns = [
     path("review/add/", views.add_owner_review, name="add_owner_review"),
     # Email webhook for incoming replies
     path("webhook/email/", views.email_webhook, name="email_webhook"),
+]
+
+# Healthcheck & Monitoring URLs
+from core.healthcheck_views import healthcheck, healthcheck_detailed, system_metrics
+
+urlpatterns += [
+    path('health/', healthcheck, name='healthcheck'),
+    path('health/detailed/', healthcheck_detailed, name='healthcheck_detailed'),
+    path('metrics/', system_metrics, name='system_metrics'),
 ]

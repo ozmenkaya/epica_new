@@ -34,9 +34,10 @@ def create_tenant_database(sender, instance, created, **kwargs):
     # Copy main database to tenant database
     main_db = settings.DATABASES['default']['NAME']
     try:
-        subprocess.run(['cp', main_db, db_path], check=True)
+        import shutil
+        shutil.copy2(main_db, db_path)
         print(f"Created tenant database: {db_path}")
-    except subprocess.CalledProcessError as e:
+    except Exception as e:
         print(f"Error creating tenant database: {e}")
         return
     

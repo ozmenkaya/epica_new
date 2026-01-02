@@ -5,6 +5,11 @@ PAGE_PERMISSIONS = {
         'codename': 'view_dashboard',
         'description': 'Dashboard sayfasını görüntüleme'
     },
+    'org_create': {
+        'name': 'Organizasyon Oluşturma',
+        'codename': 'add_organization',
+        'description': 'Yeni organizasyon oluşturma'
+    },
     'customers_list': {
         'name': 'Müşteriler Listesi',
         'codename': 'view_customers',

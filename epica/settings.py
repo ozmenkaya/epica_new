@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third-party
+    'django_celery_results',
+    'django_celery_beat',
     'rest_framework',
     'corsheaders',
     # Local apps
@@ -200,6 +202,7 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 # Security settings for production
 if not DEBUG:
     SECURE_SSL_REDIRECT = True  # Redirect HTTP to HTTPS
+    SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^health/detailed/$", r"^metrics/$"]  # Exempt healthcheck from HTTPS redirect
     SECURE_HSTS_SECONDS = 31536000  # 1 year - enable HSTS
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # Apply HSTS to all subdomains
     SECURE_HSTS_PRELOAD = True  # Allow preloading in browser HSTS lists
@@ -391,3 +394,41 @@ LOGGING = {
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")  # Cost-effective model
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+
+
+# Use signed cookie session backend for better reliability with SQLite
+# This stores session data in the cookie itself (encrypted and signed)
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SESSION_COOKIE_NAME = 'sessionid'
+
+# ============================
+# Celery Configuration
+# ============================
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'django-db'  # django-celery-results kullan
+CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Europe/Istanbul'
+CELERY_ENABLE_UTC = True
+
+# Task sonuçlarını sakla
+CELERY_RESULT_EXTENDED = True
+CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
+CELERY_RESULT_BACKEND_MAX_RETRIES = 10
+
+# Task ayarları
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 dakika
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 dakika
+
+# Email task ayarları
+CELERY_TASK_ROUTES = {
+    'core.tasks.send_email_task': {'queue': 'emails'},
+    'core.tasks.send_templated_email_task': {'queue': 'emails'},
+    'core.tasks.send_bulk_emails_task': {'queue': 'bulk_emails'},
+}
+
+# Beat scheduler (periyodik task'lar için)
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'

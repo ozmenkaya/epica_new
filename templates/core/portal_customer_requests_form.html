@@ -46,7 +46,7 @@
             <div class="col-12 col-md-4">
               <label class="form-label" for="id_form-__prefix__-category">{% trans "Kategori" %}</label>
               <select name="form-__prefix__-category" class="form-select" id="id_form-__prefix__-category">
-                {% for c in org.categories.all %}
+                {% for c in categories %}
                   <option value="{{ c.id }}">{{ c.name }}</option>
                 {% endfor %}
               </select>

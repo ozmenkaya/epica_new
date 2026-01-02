@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+import datetime
 from accounts.permissions import tenant_member_required, tenant_role_required, page_permission_required
 from django.conf import settings
 from accounts.models import Membership, Organization
@@ -359,8 +360,14 @@ def customers_create(request):
 						uname = f"{base}_{get_random_string(4)}"
 				password = p1 or get_random_string(10)
 				user = U.objects.create_user(username=uname, password=password, email=cust.email or "")
-				cust.user = user
-				cust.save(update_fields=["user"])
+				# Note: User lives in 'default' DB, Customer in tenant DB
+				# Foreign key relationship may fail due to multi-tenant architecture
+				try:
+					cust.user = user
+					cust.save(update_fields=["user"])
+				except Exception:
+					# Skip FK assignment if databases are separate
+					pass
 				if p1:
 					messages.success(request, f"Müşteri '{cust.name}' eklendi. Giriş: {uname}")
 				else:
@@ -615,6 +622,7 @@ def offers_list(request):
 		.select_related("category", "customer")
 		.annotate(qcount=models.Count("quotes"))
 		.filter(qcount__gt=0)
+		.filter(order__isnull=True)  # Exclude tickets that have been converted to orders
 		.order_by("-created_at")
 	)
 	return render(request, "core/offers_list.html", {"tickets": qs, "org": org})
@@ -722,7 +730,8 @@ def suppliers_create(request):
 		if confirm_add == "yes":
 			supplier_id = request.POST.get("existing_supplier_id")
 			if supplier_id:
-				existing_supplier = Supplier.objects.filter(pk=supplier_id).first()
+				# Supplier is in default DB (shared across organizations)
+				existing_supplier = Supplier.objects.using('default').filter(pk=supplier_id).first()
 				if existing_supplier:
 					if org in existing_supplier.organizations.all():
 						messages.warning(request, f"Tedarikçi '{existing_supplier.name}' zaten bu organizasyonda mevcut.")
@@ -734,9 +743,9 @@ def suppliers_create(request):
 		form = SupplierForm(request.POST)
 		if form.is_valid():
 			email = form.cleaned_data.get("email")
-			# Check if supplier with this email already exists
+			# Check if supplier with this email already exists (check default DB)
 			if email:
-				existing_supplier = Supplier.objects.filter(email=email).first()
+				existing_supplier = Supplier.objects.using('default').filter(email=email).first()
 			
 			if existing_supplier:
 				# Show confirmation page
@@ -764,8 +773,14 @@ def suppliers_create(request):
 						uname = f"{base}_{get_random_string(4)}"
 				password = p1 or get_random_string(10)
 				user = U.objects.create_user(username=uname, password=password, email=sup.email or "")
-				sup.user = user
-				sup.save(update_fields=["user"])
+				# Note: User lives in 'default' DB, Supplier in tenant DB
+				# Foreign key relationship may fail due to multi-tenant architecture
+				try:
+					sup.user = user
+					sup.save(update_fields=["user"])
+				except Exception:
+					# Skip FK assignment if databases are separate
+					pass
 				if p1:
 					messages.success(request, f"Tedarikçi '{sup.name}' eklendi. Giriş: {uname}")
 				else:
@@ -1083,10 +1098,10 @@ def suppliers_edit(request, pk: int):
 				messages.success(request, f"Tedarikçi '{sup.name}' güncellendi.")
 			return redirect("suppliers_list")
 		else:
-			messages.error(request, "Lütfen formu kontrol edin.")
-	else:
-		form = SupplierForm(instance=obj)
-	return render(request, "core/suppliers_form.html", {"form": form, "org": org})
+		# Show form errors
+		for field, errors in form.errors.items():
+			for error in errors:
+				messages.error(request, f"{field}: {error}")
 
 
 @page_permission_required('suppliers_delete')
@@ -1216,12 +1231,13 @@ def supplier_requests_list(request):
 	if org:
 		all_tickets = Ticket.objects.filter(organization=org).select_related("category", "customer")
 		for t in all_tickets:
+			# Skip tickets that have been converted to orders
+			if hasattr(t, "order"):
+				continue
 			if sup.id in [s.id for s in t.assigned_suppliers]:
 				tickets.append(t)
-	
+
 	return render(request, "core/portal_supplier_requests_list.html", {"tickets": tickets, "supplier": sup, "org": org})
-
-
 @login_required
 def supplier_orders_list(request):
 	sup = getattr(request.user, "supplier_profile", None)
@@ -1472,8 +1488,8 @@ def customer_offers_list(request):
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
-	# Tickets that received at least one quote
-	qs = Ticket.objects.filter(organization=cust.organization, customer=cust).annotate(qcount=models.Count("quotes")).filter(qcount__gt=0).select_related("category")
+	# Tickets that received at least one quote but not yet converted to order
+	qs = Ticket.objects.filter(organization=cust.organization, customer=cust).annotate(qcount=models.Count("quotes")).filter(qcount__gt=0).filter(order__isnull=True).select_related("category")
 	return render(request, "core/portal_customer_offers_list.html", {"tickets": qs, "customer": cust, "org": cust.organization})
 
 
@@ -1539,7 +1555,8 @@ def customer_offers_detail(request, pk: int):
 				markup = adj_data.get("markup_amount") if adj_data else Decimal("0.00")
 				selected_items.append({
 					"name": (getattr(getattr(it, "product", None), "name", None) or it.description),
-					"description": it.description,
+					"name": (getattr(getattr(it, "product", None), "name", None) or it.description),
+							"description": it.description,
 					"quantity": it.quantity,
 					# unit price shown to customer should include markup prorated per unit
 					"sell_unit_price": (supplier_total + markup) / (it.quantity or 1),
@@ -1642,7 +1659,8 @@ def customer_offers_pdf(request, pk: int):
 				sell_total = supplier_total + markup
 				sell_unit_price = sell_total / (it.quantity or 1)
 				selected_items.append({
-					"description": it.description,
+					"name": (getattr(getattr(it, "product", None), "name", None) or it.description),
+							"description": it.description,
 					"quantity": it.quantity,
 					"sell_unit_price": float(sell_unit_price),
 					"sell_total": float(sell_total),
@@ -1701,16 +1719,21 @@ def customer_offers_pdf(request, pk: int):
 	# DEBUG: Return HTML instead of PDF to see what's being rendered
 	if debug_mode:
 		return HttpResponse(html, content_type='text/html')
-
-	# Lazy import of xhtml2pdf
-	from xhtml2pdf import pisa
+	# Use WeasyPrint for PDF generation
+	from weasyprint import HTML
+	
 	response = HttpResponse(content_type="application/pdf")
-	response["Content-Disposition"] = f'attachment; filename="teklif_{ticket.id}.pdf"'
+	response["Content-Disposition"] = f'attachment; filename="teklif_{ticket.id}_{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.pdf"'
 	response["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
 	response["Pragma"] = "no-cache"
 	response["Expires"] = "0"
-	pisa.CreatePDF(src=html, dest=response)
+	
+	pdf_bytes = HTML(string=html).write_pdf()
+	response.write(pdf_bytes)
 	return response
+
+
+
 
 
 @login_required
@@ -1806,7 +1829,8 @@ def customer_requests_new(request):
 				"options": [o.strip() for o in (df.options or "").splitlines() if o.strip()],
 			})
 		cat_fields[c.id] = fields
-	return render(
+		categories_list = list(Category.objects.filter(organization=cust.organization).order_by("name"))
+		return render(
 		request,
 		"core/portal_customer_requests_form.html",
 		{
@@ -1815,6 +1839,7 @@ def customer_requests_new(request):
 			"customer": cust,
 			"org": cust.organization,
 			"cat_fields": cat_fields,
+			"categories": categories_list,
 			"dynamic_prefill": locals().get("dyn_values_by_prefix", {}),
 			"dynamic_errors": locals().get("dyn_errors_by_prefix", {}),
 		},
@@ -1873,7 +1898,7 @@ def tickets_new(request):
 				for cat, desc, qty, extra, _ in rows_buffer:
 					if cat and desc:
 						Ticket.objects.create(
-							organization=org,
+							organization_id=org.id,
 							customer=customer,
 							category=cat,
 							title=title,
@@ -1905,6 +1930,8 @@ def tickets_new(request):
 				"options": [o.strip() for o in (df.options or "").splitlines() if o.strip()],
 			})
 		cat_fields[c.id] = fields
+		# Pre-fetch categories as list to avoid database router issues in template
+		categories_list = list(Category.objects.filter(organization=org).order_by("name"))
 	return render(
 		request,
 		"core/owner_ticket_form.html",
@@ -1913,6 +1940,7 @@ def tickets_new(request):
 			"formset": formset,
 			"org": org,
 			"cat_fields": cat_fields,
+			"categories": categories_list,
 			"dynamic_prefill": locals().get("dyn_values_by_prefix", {}),
 			"dynamic_errors": locals().get("dyn_errors_by_prefix", {}),
 		},
@@ -2225,6 +2253,7 @@ def customer_requests_edit(request, pk: int):
 			"customer": cust,
 			"org": cust.organization,
 			"cat_fields": cat_fields,
+			"categories": categories_list,
 			"extra_values": locals().get("prefill_vals", obj.extra_data or {}),
 			"dynamic_edit_errors": locals().get("edit_errors", {}),
 		},
@@ -2260,8 +2289,8 @@ def customer_requests_detail(request, pk: int):
 			# Create order once on acceptance
 			if obj.selected_quote_id and not hasattr(obj, "order"):
 				order = Order.objects.create(
-					organization=obj.organization,
-					ticket=obj,
+					organization_id=obj.organization_id,
+					ticket_id=obj.id,
 					quote=obj.selected_quote,
 					supplier=(obj.selected_quote.supplier if obj.selected_quote else None),
 					currency=obj.selected_quote.currency,
@@ -2412,7 +2441,8 @@ def supplier_requests_detail(request, pk: int):
 			for it in existing.items.all():
 				initial_items.append({
 					"product": it.product_id,
-					"description": it.description,
+					"name": (getattr(getattr(it, "product", None), "name", None) or it.description),
+							"description": it.description,
 					"quantity": it.quantity,
 					"unit_price": it.unit_price,
 				})
@@ -2557,7 +2587,8 @@ def ticket_detail_owner(request, pk: int):
 				pct = None
 			items_payload.append({
 				"id": it.id,
-				"description": it.description,
+				"name": (getattr(getattr(it, "product", None), "name", None) or it.description),
+							"description": it.description,
 				"quantity": it.quantity,
 				"unit_price": str(it.unit_price),
 				"line_total": str(it.line_total),
@@ -2765,57 +2796,6 @@ def order_detail(request, pk: int):
 
 
 @login_required
-def customer_offers_pdf(request, pk: int):
-    cust = getattr(request.user, "customer_profile", None)
-    if not cust:
-        return redirect("home")
-    _set_tenant_session(request, cust.organization)
-    ticket = get_object_or_404(
-        Ticket.objects.select_related("category").prefetch_related("quotes__supplier"),
-        pk=pk,
-        organization=cust.organization,
-        customer=cust,
-    )
-
-    # Build items for PDF similar to detail view
-    selected_items = []
-    currency = None
-    if ticket.selected_quote_id and ticket.selected_quote:
-        currency = ticket.selected_quote.currency
-        items = list(ticket.selected_quote.items.all())
-        if items:
-            adjs = {a.quote_item_id: a.markup_amount for a in ticket.owner_adjustments.all()}
-            for it in items:
-                supplier_total = it.line_total
-                markup = adjs.get(it.id) or Decimal("0.00")
-                selected_items.append({
-                    "description": it.description,
-                    "quantity": it.quantity,
-                    "sell_unit_price": (supplier_total + markup) / (it.quantity or 1),
-                    "sell_total": supplier_total + markup,
-                })
-
-    html = render_to_string(
-        "core/portal_customer_offer_pdf.html",
-        {
-            "ticket": ticket,
-            "items": selected_items,
-            "currency": currency or (ticket.selected_quote.currency if ticket.selected_quote else ""),
-            "org": cust.organization,
-        },
-    )
-
-    # Lazy import of xhtml2pdf
-    from xhtml2pdf import pisa
-    from django.http import HttpResponse
-
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="teklif_{ticket.id}.pdf"'
-    pisa.CreatePDF(src=html, dest=response)
-    return response
-
-
-@login_required
 def customer_orders_list(request):
     cust = getattr(request.user, "customer_profile", None)
     if not cust:
@@ -2876,7 +2856,7 @@ def customer_products_list(request):
             created = 0
             for p, qty in selected:
                 Ticket.objects.create(
-                    organization=cust.organization,
+                    organization_id=cust.organization.id,
                     customer=cust,
                     category=p.category,
                     title=f"{p.name} yeniden sipariş",
@@ -3349,3 +3329,34 @@ def dashboard_widgets_settings(request):
 	}
 	
 	return render(request, "core/dashboard_widgets_settings.html", context)
+
+
+
+def cookie_test(request):
+    """Debug view to check session and cookies"""
+    from django.shortcuts import render
+    import json
+    
+    # Force session creation
+    request.session.modified = True
+    if not request.session.session_key:
+        request.session.create()
+    
+    # Add some data to session to force save
+    request.session['test_key'] = 'test_value'
+    request.session.save()
+    
+    session_data = {}
+    for key in request.session.keys():
+        try:
+            session_data[key] = str(request.session[key])
+        except:
+            session_data[key] = "<unserializable>"
+    
+    context = {
+        'session_key': request.session.session_key,
+        'user': request.user,
+        'current_org': request.session.get('current_org'),
+        'session_data': json.dumps(session_data, indent=2),
+    }
+    return render(request, 'core/cookie_test.html', context)

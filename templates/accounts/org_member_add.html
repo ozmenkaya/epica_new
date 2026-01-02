@@ -40,6 +40,28 @@
           </div>
           
           <div class="mb-3">
+            <label for="first_name" class="form-label">{% trans "Ad" %}</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="first_name" 
+                   name="first_name" 
+                   value="{{ first_name }}"
+                   placeholder="{% trans 'Örn: Ahmet' %}">
+            <div class="form-text">{% trans "Opsiyonel: Kullanıcının adı" %}</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="last_name" class="form-label">{% trans "Soyad" %}</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="last_name" 
+                   name="last_name" 
+                   value="{{ last_name }}"
+                   placeholder="{% trans 'Örn: Yılmaz' %}">
+            <div class="form-text">{% trans "Opsiyonel: Kullanıcının soyadı" %}</div>
+          </div>
+          
+          <div class="mb-3">
             <label for="password" class="form-label">{% trans "Şifre" %}</label>
             <input type="text" 
                    class="form-control" 

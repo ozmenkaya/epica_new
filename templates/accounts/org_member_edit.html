@@ -14,12 +14,41 @@
       </div>
       <div class="card-body">
         <div class="alert alert-info">
-          <strong><i class="bi bi-person-circle"></i> {{ member.user.username }}</strong>
+          <strong><i class="bi bi-person-circle"></i> 
+            {% if member.user.first_name or member.user.last_name %}
+              {{ member.user.get_full_name }}
+            {% else %}
+              {{ member.user.username }}
+            {% endif %}
+          </strong>
+          {% if member.user.first_name or member.user.last_name %}
+            <div class="text-muted small">@{{ member.user.username }}</div>
+          {% endif %}
           <div class="text-muted small">{{ member.user.email }}</div>
         </div>
         
         <form method="post">
           {% csrf_token %}
+          
+          <div class="mb-3">
+            <label for="first_name" class="form-label">{% trans "Ad" %}</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="first_name" 
+                   name="first_name" 
+                   value="{{ member.user.first_name }}"
+                   placeholder="{% trans 'Örn: Ahmet' %}">
+          </div>
+          
+          <div class="mb-3">
+            <label for="last_name" class="form-label">{% trans "Soyad" %}</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="last_name" 
+                   name="last_name" 
+                   value="{{ member.user.last_name }}"
+                   placeholder="{% trans 'Örn: Yılmaz' %}">
+          </div>
           
           <div class="mb-3">
             <label for="role" class="form-label">{% trans "Rol" %}</label>

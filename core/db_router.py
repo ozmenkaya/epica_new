@@ -63,8 +63,16 @@ class TenantDatabaseRouter:
     
     def allow_relation(self, obj1, obj2, **hints):
         """
-        Allow relations between objects in the same database.
+        Allow relations between objects.
+        
+        Special case: Allow relations between tenant models and 
+        auth/accounts models (which live in 'default' database).
         """
+        # Always allow relations involving auth or accounts models
+        # These models are in 'default' but need to relate to tenant models
+        if obj1._meta.app_label in ('auth', 'accounts') or obj2._meta.app_label in ('auth', 'accounts'):
+            return True
+        
         db1 = obj1._state.db or self.get_tenant_db()
         db2 = obj2._state.db or self.get_tenant_db()
         return db1 == db2

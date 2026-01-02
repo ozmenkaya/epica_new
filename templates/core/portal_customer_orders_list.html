@@ -26,7 +26,9 @@
           <td class="text-muted">#{{ o.id }}</td>
           <td><small class="text-muted">{{ o.created_at|date:"Y-m-d H:i" }}</small></td>
           <td>
-            <a href="{% url 'customer_requests_detail' o.ticket_id %}">#{{ o.ticket_id }}</a>
+            <a href="{% url 'customer_requests_detail' o.ticket_id %}">
+              #{{ o.ticket_id }}{% if o.ticket %} - {{ o.ticket.title }}{% endif %}
+            </a>
           </td>
           <td>{% if o.quote and o.quote.supplier %}{{ o.quote.supplier.name }}{% else %}-{% endif %}</td>
           <td>{{ o.total }} {{ o.currency }}</td>

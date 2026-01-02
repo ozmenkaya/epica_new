@@ -11,6 +11,8 @@ def tenant(request: HttpRequest):
       - tenant_membership: Membership or None
       - tenant_is_owner/admin/member: bool
       - tenant_role_key: optional custom role key (from Membership.role_fk)
+      - tenant_permissions: list of permission keys for the current user
+      - has_perm: function to check if user has a specific permission
     """
     # First try to get org from request (set by TenantMiddleware from subdomain)
     org = getattr(request, "tenant", None)
@@ -27,6 +29,7 @@ def tenant(request: HttpRequest):
     mem: Optional[Membership] = None
     is_owner = is_admin = is_member = False
     role_key = None
+    permissions = []
 
     user = getattr(request, "user", None)
     if org is not None and getattr(user, "is_authenticated", False):
@@ -35,8 +38,13 @@ def tenant(request: HttpRequest):
             is_owner = mem.role == Membership.Role.OWNER
             is_admin = mem.role == Membership.Role.ADMIN or is_owner
             is_member = True
+            permissions = mem.get_permissions()
             if mem.role_fk:
                 role_key = mem.role_fk.key
+
+    # Helper function to check permissions in templates
+    def has_perm(perm_key):
+        return perm_key in permissions
 
     return {
         "tenant_org": org,
@@ -45,4 +53,6 @@ def tenant(request: HttpRequest):
         "tenant_is_admin": is_admin,
         "tenant_is_member": is_member,
         "tenant_role_key": role_key,
+        "tenant_permissions": permissions,
+        "has_perm": has_perm,
     }

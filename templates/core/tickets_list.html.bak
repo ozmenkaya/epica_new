@@ -5,9 +5,7 @@
 <div class="card shadow-sm">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h5 class="mb-0">{{ org.name }} - {% trans "Tüm Talepler" %}</h5>
-    {% if 'tickets_create' in tenant_permissions %}
     <a class="btn btn-sm btn-primary" href="{% url 'tickets_new' %}">{% trans "Yeni Talep" %}</a>
-    {% endif %}
   </div>
   <div class="card-body">
     <div class="table-responsive">
