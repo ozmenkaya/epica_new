@@ -1102,10 +1102,6 @@ def suppliers_edit(request, pk: int):
 		for field, errors in form.errors.items():
 			for error in errors:
 				messages.error(request, f"{field}: {error}")
-
-
-@page_permission_required('suppliers_delete')
-def suppliers_delete(request, pk: int):
 	org = getattr(request, "tenant", None)
 	obj = get_object_or_404(Supplier, pk=pk, organizations=org)
 	if request.method == "POST":
