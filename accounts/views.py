@@ -94,7 +94,20 @@ def _redirect_authenticated_user(user, request):
 		return redirect("/admin/")
 	
 	# 3. Customer profile -> Customer Portal
-	customer_profile = getattr(user, 'customer_profile', None)
+	# Cross-database: Customer tenant DB'lerde olduğu için tüm tenant'larda ara
+	customer_profile = None
+	from django.conf import settings
+	from core.models import Customer
+	tenant_dbs = [db for db in settings.DATABASES.keys() if db.startswith('tenant_')]
+	for db_alias in tenant_dbs:
+		try:
+			cp = Customer.objects.using(db_alias).filter(user_id=user.id).select_related('organization').first()
+			if cp:
+				customer_profile = cp
+				break
+		except Exception:
+			continue
+	
 	if customer_profile is not None:
 		logger.info(f"Redirecting customer {user.username} to customer portal")
 		# Set organization in session

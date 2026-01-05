@@ -229,7 +229,7 @@ def role_landing(request):
 		return redirect("/admin/")
 
 	# 2) Customer portal users
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if cust is not None:
 		_set_tenant_session(request, cust.organization)
 		return redirect("customer_portal")
@@ -292,9 +292,9 @@ def role_landing(request):
 
 class CustomerForm(forms.ModelForm):
 	# Optional login management by owner/admin
-	login_username = forms.CharField(label="Kullanıcı Adı", required=False)
-	login_password1 = forms.CharField(label="Şifre", required=False, widget=forms.PasswordInput)
-	login_password2 = forms.CharField(label="Şifre (tekrar)", required=False, widget=forms.PasswordInput)
+	login_username = forms.CharField(label="Kullanıcı Adı", required=False, widget=forms.TextInput(attrs={'autocomplete': 'off'}))
+	login_password1 = forms.CharField(label="Şifre", required=False, widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}))
+	login_password2 = forms.CharField(label="Şifre (tekrar)", required=False, widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}))
 	class Meta:
 		model = Customer
 		fields = ["name", "email", "phone", "notes"]
@@ -868,8 +868,12 @@ def customers_edit(request, pk: int):
 							uname = f"{base}_{get_random_string(4)}"
 					password = p1 or get_random_string(10)
 					user = U.objects.create_user(username=uname, password=password, email=cust.email or "")
-					cust.user = user
-					cust.save(update_fields=["user"])
+					# Cross-database FK için raw SQL kullan
+					from django.db import connections
+					db_alias = cust._state.db or 'default'
+					with connections[db_alias].cursor() as cursor:
+						cursor.execute('UPDATE core_customer SET user_id = %s WHERE id = %s', [user.id, cust.id])
+					cust.refresh_from_db()
 					messages.success(request, f"Müşteri girişi oluşturuldu: {uname}")
 				else:
 					changed = False
@@ -889,7 +893,7 @@ def customers_edit(request, pk: int):
 			messages.error(request, "Lütfen formu kontrol edin.")
 	else:
 		form = CustomerForm(instance=obj)
-	return render(request, "core/customers_form.html", {"form": form, "org": org})
+	return render(request, "core/customers_form.html", {"form": form, "org": org, "obj": obj})
 
 
 @page_permission_required('customers_delete')
@@ -1093,7 +1097,10 @@ def customer_detail(request, pk: int):
 	
 	# Müşteri adına işlem yapabilmek için ek veriler
 	import json
-	categories = Category.objects.filter(organization=org).prefetch_related('suppliers').order_by('name')
+	# Sadece en az bir tedarikçisi olan kategorileri getir
+	categories = Category.objects.filter(organization=org).prefetch_related('suppliers').annotate(
+		supplier_count=models.Count('suppliers')
+	).filter(supplier_count__gt=0).order_by('name')
 	suppliers = Supplier.objects.filter(organizations=org).order_by('name')
 	# Ürünler: Genel (customer=None) veya bu müşteriye özel olanlar
 	products = SupplierProduct.objects.filter(
@@ -1262,6 +1269,20 @@ def _set_tenant_session(request, org):
 	request.session.modified = True  # Force Django to save session
 
 
+def _get_customer_profile(user):
+	"""Get customer profile from any tenant database (cross-database lookup)."""
+	from django.conf import settings
+	tenant_dbs = [db for db in settings.DATABASES.keys() if db.startswith('tenant_')]
+	for db_alias in tenant_dbs:
+		try:
+			cp = Customer.objects.using(db_alias).filter(user_id=user.id).select_related('organization').first()
+			if cp:
+				return cp
+		except Exception:
+			continue
+	return None
+
+
 def _get_supplier_org(supplier, request):
 	"""Get organization for supplier - from session or first organization."""
 	org = getattr(request, "tenant", None)
@@ -1277,7 +1298,7 @@ def portal_home(request):
 	- Else if supplier profile, go to supplier portal (and set tenant)
 	- Else fall back to role-based landing
 	"""
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if cust is not None:
 		_set_tenant_session(request, cust.organization)
 		return redirect("customer_portal")
@@ -1293,7 +1314,7 @@ def portal_home(request):
 
 @login_required
 def customer_portal(request):
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -1580,7 +1601,7 @@ class OwnerOfferForm(forms.Form):
 
 @login_required
 def customer_requests_list(request):
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -1599,7 +1620,7 @@ class QuoteCommentForm(forms.ModelForm):
 
 @login_required
 def customer_offers_list(request):
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -1610,7 +1631,7 @@ def customer_offers_list(request):
 
 @login_required
 def customer_offers_detail(request, pk: int):
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -1738,7 +1759,7 @@ def customer_offers_pdf(request, pk: int):
 	sys.stderr.write(f"{'='*60}\n\n")
 	sys.stderr.flush()
 	
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -1854,7 +1875,7 @@ def customer_offers_pdf(request, pk: int):
 @login_required
 @ratelimit(key='user', rate='100/h', method='POST')
 def customer_requests_new(request):
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -2305,7 +2326,7 @@ def category_rules_delete(request, category_id: int, pk: int):
 
 @login_required
 def customer_requests_edit(request, pk: int):
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -2377,7 +2398,7 @@ def customer_requests_edit(request, pk: int):
 
 @login_required
 def customer_requests_delete(request, pk: int):
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -2390,7 +2411,7 @@ def customer_requests_delete(request, pk: int):
 
 @login_required
 def customer_requests_detail(request, pk: int):
-	cust = getattr(request.user, "customer_profile", None)
+	cust = _get_customer_profile(request.user)
 	if not cust:
 		return redirect("home")
 	_set_tenant_session(request, cust.organization)
@@ -2984,7 +3005,7 @@ def order_detail(request, pk: int):
 
 @login_required
 def customer_orders_list(request):
-    cust = getattr(request.user, "customer_profile", None)
+    cust = _get_customer_profile(request.user)
     if not cust:
         return redirect("home")
     _set_tenant_session(request, cust.organization)
@@ -3002,7 +3023,7 @@ def customer_orders_list(request):
 
 @login_required
 def customer_products_list(request):
-    cust = getattr(request.user, "customer_profile", None)
+    cust = _get_customer_profile(request.user)
     if not cust:
         return redirect("home")
     _set_tenant_session(request, cust.organization)

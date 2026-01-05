@@ -10,9 +10,9 @@ User = get_user_model()
 
 class Customer(models.Model):
 	organization = models.ForeignKey(
-		Organization, on_delete=models.CASCADE, related_name="customers"
+		Organization, on_delete=models.CASCADE, related_name="customers", db_constraint=False
 	)
-	user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="customer_profile")
+	user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="customer_profile", db_constraint=False)
 	name = models.CharField(max_length=200)
 	email = models.EmailField(blank=True, null=True)
 	phone = models.CharField(max_length=50, blank=True)
