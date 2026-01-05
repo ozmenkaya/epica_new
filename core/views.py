@@ -4,12 +4,12 @@ from accounts.permissions import tenant_member_required, tenant_role_required, p
 from django.conf import settings
 from accounts.models import Membership, Organization
 from .models import Customer, Supplier, Category, Ticket
-from .models import Customer, Supplier, Category, Ticket, TicketAttachment, Quote, SupplierProduct, QuoteItem, OwnerQuoteAdjustment, CategoryFormField, CategorySupplierRule, UserDashboardWidget
+from .models import Customer, Supplier, Category, Ticket, TicketAttachment, Quote, SupplierProduct, QuoteItem, OwnerQuoteAdjustment, CategoryFormField, CategorySupplierRule, UserDashboardWidget, CURRENCY_CHOICES, OrderTemplate, OrderTemplateItem
 from django.db import models
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import formset_factory
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from django.contrib import messages
 from django_ratelimit.decorators import ratelimit
 from django.contrib.auth.decorators import login_required
@@ -314,11 +314,15 @@ class CustomerForm(forms.ModelForm):
 		# If username provided, ensure it's unique (if creating new or changing)
 		uname = cleaned.get("login_username")
 		if uname:
+			# Eğer bu müşterinin kendi kullanıcı adıysa, kontrol etme
+			if self.instance and self.instance.pk:
+				current_user = getattr(self.instance, "user", None)
+				if current_user and current_user.username == uname:
+					return cleaned
+			
+			# Başka birinin kullanıcı adını kullanmaya çalışıyor mu kontrol et
 			U = get_user_model()
-			qs = U.objects.filter(username=uname)
-			if self.instance and getattr(self.instance, "user", None):
-				qs = qs.exclude(pk=self.instance.user_id)
-			if qs.exists():
+			if U.objects.using('default').filter(username=uname).exists():
 				raise forms.ValidationError("Bu kullanıcı adı kullanımda.")
 		return cleaned
 
@@ -344,6 +348,9 @@ def customers_create(request):
 	org = getattr(request, "tenant", None)
 	if request.method == "POST":
 		form = CustomerForm(request.POST)
+		print(f"DEBUG customers_create: POST received, form.is_valid()={form.is_valid()}")
+		if not form.is_valid():
+			print(f"DEBUG customers_create: Form errors: {form.errors}")
 		if form.is_valid():
 			cust = form.save(commit=False)
 			cust.organization = org
@@ -375,8 +382,7 @@ def customers_create(request):
 			else:
 				messages.success(request, f"Müşteri '{cust.name}' başarıyla eklendi.")
 			return redirect("customers_list")
-		else:
-			messages.error(request, "Lütfen formu kontrol edin.")
+		# Form is invalid - errors will be shown in template
 	else:
 		form = CustomerForm()
 	return render(request, "core/customers_form.html", {"form": form, "org": org})
@@ -384,8 +390,8 @@ def customers_create(request):
 
 class SupplierForm(forms.ModelForm):
 	login_username = forms.CharField(label="Kullanıcı Adı", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
-	login_password1 = forms.CharField(label="Şifre", required=False, widget=forms.PasswordInput(attrs={"class": "form-control"}))
-	login_password2 = forms.CharField(label="Şifre (tekrar)", required=False, widget=forms.PasswordInput(attrs={"class": "form-control"}))
+	login_password1 = forms.CharField(label="Şifre", required=False, widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Boş bırakırsanız mevcut şifre korunur"}))
+	login_password2 = forms.CharField(label="Şifre (tekrar)", required=False, widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Boş bırakırsanız mevcut şifre korunur"}))
 	
 	class Meta:
 		model = Supplier
@@ -405,16 +411,18 @@ class SupplierForm(forms.ModelForm):
 		}
 
 	def __init__(self, *args, **kwargs):
-		self.is_existing = kwargs.pop("is_existing", False)
 		instance = kwargs.get("instance")
 		super().__init__(*args, **kwargs)
-		if instance and getattr(instance, "user", None):
-			self.fields["login_username"].initial = instance.user.username
-		# Hide login fields if existing supplier
-		if self.is_existing:
-			self.fields["login_username"].widget = forms.HiddenInput()
-			self.fields["login_password1"].widget = forms.HiddenInput()
-			self.fields["login_password2"].widget = forms.HiddenInput()
+		self._existing_user = None
+		if instance and instance.user_id:
+			# User is in default DB, need to fetch it explicitly
+			U = get_user_model()
+			try:
+				user = U.objects.using('default').get(pk=instance.user_id)
+				self.fields["login_username"].initial = user.username
+				self._existing_user = user
+			except U.DoesNotExist:
+				pass
 
 	def validate_unique(self):
 		"""Override to skip unique validation - we handle it in the view."""
@@ -426,21 +434,23 @@ class SupplierForm(forms.ModelForm):
 
 	def clean(self):
 		cleaned = super().clean()
-		# Skip password validation for existing suppliers
-		if self.is_existing:
-			return cleaned
 		p1 = cleaned.get("login_password1")
 		p2 = cleaned.get("login_password2")
 		if (p1 or p2) and p1 != p2:
 			raise forms.ValidationError("Şifreler eşleşmiyor.")
+		
 		uname = cleaned.get("login_username")
 		if uname:
+			# Eğer bu tedarikçinin kendi kullanıcı adıysa, kontrol etme
+			if self._existing_user and self._existing_user.username == uname:
+				# Kendi kullanıcı adını kullanıyor, sorun yok
+				return cleaned
+			
+			# Başka birinin kullanıcı adını kullanmaya çalışıyor mu kontrol et
 			U = get_user_model()
-			qs = U.objects.filter(username=uname)
-			if self.instance and getattr(self.instance, "user", None):
-				qs = qs.exclude(pk=self.instance.user_id)
-			if qs.exists():
+			if U.objects.using('default').filter(username=uname).exists():
 				raise forms.ValidationError("Bu kullanıcı adı kullanımda.")
+		
 		return cleaned
 
 
@@ -468,10 +478,16 @@ class SupplierProductForm(forms.ModelForm):
 
 class OwnerSupplierProductForm(forms.ModelForm):
 	supplier = forms.ModelChoiceField(queryset=Supplier.objects.none(), label="Tedarikçi")
+	customer = forms.ModelChoiceField(
+		queryset=Customer.objects.none(), 
+		label="Müşteri", 
+		required=False,
+		empty_label="Genel (Tüm Müşteriler)"
+	)
 
 	class Meta:
 		model = SupplierProduct
-		fields = ["supplier", "category", "name", "description", "base_price", "is_active"]
+		fields = ["supplier", "category", "customer", "name", "description", "base_price", "is_active"]
 
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop("organization", None)
@@ -479,6 +495,7 @@ class OwnerSupplierProductForm(forms.ModelForm):
 		if org is not None:
 			self.fields["supplier"].queryset = Supplier.objects.filter(organizations=org).order_by("name")
 			self.fields["category"].queryset = Category.objects.filter(organization=org).order_by("name")
+			self.fields["customer"].queryset = Customer.objects.filter(organization=org).order_by("name")
 		self._organization = org
 
 	def clean(self):
@@ -507,9 +524,16 @@ class CategoryForm(forms.ModelForm):
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop("organization", None)
 		super().__init__(*args, **kwargs)
+		self._organization = org
 		# Limit suppliers to current organization
 		if org is not None:
-			self.fields["suppliers"].queryset = Supplier.objects.filter(organizations=org).order_by("name")
+			supplier_qs = Supplier.objects.filter(organizations=org).order_by("name")
+			# Include currently selected suppliers even if not in org (for display purposes)
+			if self.instance and self.instance.pk:
+				current_supplier_ids = list(self.instance.suppliers.values_list('pk', flat=True))
+				if current_supplier_ids:
+					supplier_qs = (supplier_qs | Supplier.objects.filter(pk__in=current_supplier_ids)).distinct().order_by("name")
+			self.fields["suppliers"].queryset = supplier_qs
 			# Limit parent categories to current organization, excluding self and children
 			parent_qs = Category.objects.filter(organization=org).order_by("name")
 			if self.instance and self.instance.pk:
@@ -521,6 +545,8 @@ class CategoryForm(forms.ModelForm):
 			self.fields["parent"].queryset = parent_qs
 			self.fields["parent"].required = False
 			self.fields["parent"].empty_label = "--- Ana Kategori ---"
+		# Suppliers field is optional - parent categories may not need suppliers
+		self.fields["suppliers"].required = False
 
 
 @page_permission_required('categories_list')
@@ -580,8 +606,7 @@ def categories_edit(request, pk: int):
 					messages.error(request, f"Bu organizasyonda '{form.cleaned_data.get('name')}' isimli kategori zaten mevcut.")
 				else:
 					messages.error(request, f"Kategori güncellenirken hata: {str(e)}")
-		else:
-			messages.error(request, "Lütfen formu kontrol edin.")
+		# Form errors will be shown in template
 	else:
 		form = CategoryForm(instance=obj, organization=org)
 	return render(request, "core/categories_form.html", {"form": form, "org": org})
@@ -714,9 +739,36 @@ def owner_products_new(request):
 			obj.save()
 			messages.success(request, "Ürün oluşturuldu.")
 			return redirect("owner_products_list")
+		# Form errors will be shown in template
 	else:
 		form = OwnerSupplierProductForm(organization=org)
 	return render(request, "core/owner_products_form.html", {"form": form, "org": org})
+
+
+@page_permission_required('products_manage')
+def owner_products_edit(request, pk: int):
+	org = getattr(request, "tenant", None)
+	obj = get_object_or_404(SupplierProduct, pk=pk, organization=org)
+	if request.method == "POST":
+		form = OwnerSupplierProductForm(request.POST, instance=obj, organization=org)
+		if form.is_valid():
+			form.save()
+			messages.success(request, "Ürün güncellendi.")
+			return redirect("owner_products_list")
+	else:
+		form = OwnerSupplierProductForm(instance=obj, organization=org)
+	return render(request, "core/owner_products_form.html", {"form": form, "org": org, "edit_mode": True, "product": obj})
+
+
+@page_permission_required('products_manage')
+def owner_products_delete(request, pk: int):
+	org = getattr(request, "tenant", None)
+	obj = get_object_or_404(SupplierProduct, pk=pk, organization=org)
+	if request.method == "POST":
+		obj.delete()
+		messages.success(request, "Ürün silindi.")
+		return redirect("owner_products_list")
+	return render(request, "core/owner_products_confirm_delete.html", {"obj": obj, "org": org})
 
 
 @page_permission_required('suppliers_create')
@@ -749,7 +801,6 @@ def suppliers_create(request):
 			
 			if existing_supplier:
 				# Show confirmation page
-				form = SupplierForm(request.POST, is_existing=True)
 				return render(request, "core/suppliers_form.html", {
 					"form": form, 
 					"org": org, 
@@ -1040,6 +1091,30 @@ def customer_detail(request, pk: int):
 				'count': category_reviews.count()
 			}
 	
+	# Müşteri adına işlem yapabilmek için ek veriler
+	import json
+	categories = Category.objects.filter(organization=org).prefetch_related('suppliers').order_by('name')
+	suppliers = Supplier.objects.filter(organizations=org).order_by('name')
+	# Ürünler: Genel (customer=None) veya bu müşteriye özel olanlar
+	products = SupplierProduct.objects.filter(
+		organization=org
+	).filter(
+		models.Q(customer__isnull=True) | models.Q(customer=customer)
+	).select_related('supplier').order_by('name')
+	products_json = json.dumps(list(products.values('id', 'supplier_id', 'name', 'base_price')))
+	
+	# Kategori-Tedarikçi eşleşmesi JSON
+	category_suppliers = {}
+	for cat in categories:
+		category_suppliers[cat.id] = list(cat.suppliers.values_list('id', flat=True))
+	category_suppliers_json = json.dumps(category_suppliers)
+	
+	# Tedarikçi listesi JSON
+	suppliers_json = json.dumps(list(suppliers.values('id', 'name')))
+	
+	# Sipariş şablonları
+	order_templates = OrderTemplate.objects.filter(organization=org, customer=customer)
+	
 	context = {
 		'org': org,
 		'customer': customer,
@@ -1054,6 +1129,15 @@ def customer_detail(request, pk: int):
 		'badge_text': badge_text,
 		'owner_reviews': owner_reviews[:10],
 		'review_stats': review_stats,
+		# Müşteri işlemleri için ek veriler
+		'categories': categories,
+		'suppliers': suppliers,
+		'suppliers_json': suppliers_json,
+		'category_suppliers_json': category_suppliers_json,
+		'products': products,
+		'products_json': products_json,
+		'currency_choices': CURRENCY_CHOICES,
+		'order_templates': order_templates,
 	}
 	
 	return render(request, "core/customer_detail.html", context)
@@ -1068,6 +1152,9 @@ def suppliers_edit(request, pk: int):
 		form = SupplierForm(request.POST, instance=obj)
 		if form.is_valid():
 			sup = form.save()
+			messages.success(request, f"Tedarikçi '{sup.name}' güncellendi.")
+			print(f"DEBUG: Form saved successfully. Supplier: {sup.name}, is_simplified: {sup.is_simplified}")
+			
 			U = get_user_model()
 			uname = form.cleaned_data.get("login_username") or ""
 			p1 = form.cleaned_data.get("login_password1") or ""
@@ -1077,12 +1164,20 @@ def suppliers_edit(request, pk: int):
 					if not uname:
 						base = f"supp_{getattr(org, 'slug', 'org')}_{sup.id}"
 						uname = base
-						while U.objects.filter(username=uname).exists():
+						while U.objects.using('default').filter(username=uname).exists():
 							uname = f"{base}_{get_random_string(4)}"
 					password = p1 or get_random_string(10)
-					user = U.objects.create_user(username=uname, password=password, email=sup.email or "")
-					sup.user = user
-					sup.save(update_fields=["user"])
+					user = U.objects.using('default').create_user(username=uname, password=password, email=sup.email or "")
+					# Note: User lives in 'default' DB, Supplier in tenant DB
+					# Foreign key relationship may fail due to multi-tenant architecture
+					try:
+						sup.user = user
+						sup.save(update_fields=["user"])
+					except Exception:
+						# Skip FK assignment if databases are separate - store user_id directly
+						from django.db import connection
+						with connection.cursor() as cursor:
+							cursor.execute("UPDATE core_supplier SET user_id = %s WHERE id = %s", [user.id, sup.id])
 					messages.success(request, f"Tedarikçi girişi oluşturuldu: {uname}")
 				else:
 					changed = False
@@ -1093,12 +1188,15 @@ def suppliers_edit(request, pk: int):
 						user.set_password(p1)
 						changed = True
 					if changed:
-						user.save()
-						messages.success(request, "Tedarikçi giriş bilgileri güncellendi.")
-			else:
-				messages.success(request, f"Tedarikçi '{sup.name}' güncellendi.")
+						user.using('default').save()
+						messages.info(request, "Giriş bilgileri de güncellendi.")
 			return redirect("suppliers_list")
 		# If form is invalid, it will be rendered below with errors
+		else:
+			print(f"DEBUG: Form is NOT valid. Errors: {form.errors}")
+			for field, errors in form.errors.items():
+				for error in errors:
+					messages.error(request, f"{field}: {error}")
 	else:
 		# GET request - initialize form
 		form = SupplierForm(instance=obj)
@@ -1128,6 +1226,31 @@ def check_supplier_email(request):
 			"name": supplier.name,
 			"id": supplier.id
 		})
+	return JsonResponse({"exists": False})
+
+
+@login_required
+def check_username(request):
+	"""AJAX endpoint to check if username is already taken."""
+	from django.http import JsonResponse
+	username = request.GET.get("username", "").strip()
+	exclude_user_id = request.GET.get("exclude_user_id", "")
+	
+	if not username:
+		return JsonResponse({"exists": False})
+	
+	U = get_user_model()
+	qs = U.objects.using('default').filter(username=username)
+	
+	# Exclude current user if editing
+	if exclude_user_id:
+		try:
+			qs = qs.exclude(pk=int(exclude_user_id))
+		except (ValueError, TypeError):
+			pass
+	
+	if qs.exists():
+		return JsonResponse({"exists": True, "message": "Bu kullanıcı adı kullanımda."})
 	return JsonResponse({"exists": False})
 
 
@@ -2742,6 +2865,78 @@ def orders_list(request):
 	return render(request, "core/orders_list.html", {"orders": qs, "org": org, "q": q})
 
 
+class AdminOrderForm(forms.Form):
+	"""Form for admin to create order on behalf of customer."""
+	customer = forms.ModelChoiceField(queryset=Customer.objects.none(), label="Müşteri")
+	category = forms.ModelChoiceField(queryset=Category.objects.none(), label="Kategori")
+	title = forms.CharField(max_length=200, label="Talep Başlığı")
+	description = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False, label="Açıklama")
+	supplier = forms.ModelChoiceField(queryset=Supplier.objects.none(), label="Tedarikçi")
+	product = forms.ModelChoiceField(queryset=SupplierProduct.objects.none(), required=False, label="Ürün (opsiyonel)")
+	quantity = forms.IntegerField(min_value=1, initial=1, label="Adet")
+	unit_price = forms.DecimalField(max_digits=12, decimal_places=2, label="Birim Fiyat")
+	currency = forms.ChoiceField(choices=CURRENCY_CHOICES, initial="TRY", label="Para Birimi")
+	
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop("organization", None)
+		super().__init__(*args, **kwargs)
+		if org:
+			self.fields["customer"].queryset = Customer.objects.filter(organization=org).order_by("name")
+			self.fields["category"].queryset = Category.objects.filter(organization=org).order_by("name")
+			self.fields["supplier"].queryset = Supplier.objects.filter(organizations=org).order_by("name")
+			self.fields["product"].queryset = SupplierProduct.objects.filter(organization=org).order_by("name")
+
+
+@page_permission_required('orders_manage')
+def orders_create(request):
+	"""Admin creates order on behalf of customer."""
+	org = getattr(request, "tenant", None)
+	if request.method == "POST":
+		form = AdminOrderForm(request.POST, organization=org)
+		if form.is_valid():
+			# Create ticket
+			ticket = Ticket.objects.create(
+				organization=org,
+				customer=form.cleaned_data["customer"],
+				category=form.cleaned_data["category"],
+				title=form.cleaned_data["title"],
+				description=form.cleaned_data["description"],
+				desired_quantity=form.cleaned_data["quantity"],
+				status=Ticket.Status.ACCEPTED,
+			)
+			# Calculate total
+			quantity = form.cleaned_data["quantity"]
+			unit_price = form.cleaned_data["unit_price"]
+			total = quantity * unit_price
+			product = form.cleaned_data.get("product")
+			# Create order
+			order = Order.objects.create(
+				organization=org,
+				ticket=ticket,
+				supplier=form.cleaned_data["supplier"],
+				currency=form.cleaned_data["currency"],
+				total=total,
+				status=Order.Status.PROCESSING,
+			)
+			# Create order item
+			OrderItem.objects.create(
+				order=order,
+				product=product,
+				description=product.name if product else form.cleaned_data["title"],
+				quantity=quantity,
+				unit_price=unit_price,
+				total_price=total,
+			)
+			messages.success(request, f"Sipariş #{order.id} oluşturuldu.")
+			return redirect("orders_list")
+	else:
+		form = AdminOrderForm(organization=org)
+	
+	# Get all products for JavaScript
+	products = list(SupplierProduct.objects.filter(organization=org).values("id", "supplier_id", "name", "base_price"))
+	return render(request, "core/orders_form.html", {"form": form, "org": org, "products_json": products})
+
+
 @page_permission_required('orders_manage')
 def order_detail(request, pk: int):
 	org = getattr(request, "tenant", None)
@@ -3165,6 +3360,356 @@ def customer_feedback_survey(request, token: str):
 		"supplier": order.supplier,
 		"customer": order.ticket.customer,
 	})
+
+
+# ============================================================================
+# Müşteri Adına İşlemler (Customer Detail Page Actions)
+# ============================================================================
+
+@login_required
+@page_permission_required('tickets_create')
+def customer_create_ticket(request, customer_id: int):
+	"""Müşteri adına talep oluştur"""
+	org = getattr(request, "tenant", None)
+	customer = get_object_or_404(Customer, id=customer_id, organization=org)
+	
+	if request.method != 'POST':
+		return redirect('customer_detail', pk=customer_id)
+	
+	category_id = request.POST.get('category')
+	title = request.POST.get('title', '').strip()
+	description = request.POST.get('description', '').strip()
+	quantity = request.POST.get('quantity')
+	unit = request.POST.get('unit', '').strip()
+	deadline = request.POST.get('deadline')
+	
+	if not category_id or not title:
+		messages.error(request, "Kategori ve başlık zorunludur.")
+		return redirect('customer_detail', pk=customer_id)
+	
+	try:
+		category = Category.objects.get(id=category_id, organization=org)
+	except Category.DoesNotExist:
+		messages.error(request, "Geçersiz kategori.")
+		return redirect('customer_detail', pk=customer_id)
+	
+	# Create ticket
+	ticket = Ticket.objects.create(
+		organization=org,
+		customer=customer,
+		category=category,
+		title=title,
+		description=description,
+		quantity=int(quantity) if quantity else 1,
+		unit=unit or 'adet',
+		deadline=deadline if deadline else None,
+		status='pending',
+	)
+	
+	messages.success(request, f"Talep #{ticket.id} başarıyla oluşturuldu.")
+	return redirect('customer_detail', pk=customer_id)
+
+
+@login_required
+@page_permission_required('orders_manage')
+def customer_create_order(request, customer_id: int):
+	"""Müşteri adına çoklu ürünle sipariş oluştur - her satırda kategori/tedarikçi seçimi"""
+	org = getattr(request, "tenant", None)
+	customer = get_object_or_404(Customer, id=customer_id, organization=org)
+	
+	if request.method != 'POST':
+		return redirect('customer_detail', pk=customer_id)
+	
+	title = request.POST.get('title', '').strip()
+	description = request.POST.get('description', '').strip()
+	currency = request.POST.get('currency', 'TRY')
+	
+	# Çoklu ürün verilerini al
+	category_ids = request.POST.getlist('item_category[]')
+	supplier_ids = request.POST.getlist('item_supplier[]')
+	product_ids = request.POST.getlist('item_product[]')
+	quantities = request.POST.getlist('item_quantity[]')
+	unit_prices = request.POST.getlist('item_unit_price[]')
+	descriptions = request.POST.getlist('item_description[]')
+	
+	if not title:
+		messages.error(request, "Sipariş başlığı zorunludur.")
+		return redirect('customer_detail', pk=customer_id)
+	
+	# Satırları doğrula ve grupla (tedarikçi + kategori bazında)
+	# Her tedarikçi için ayrı sipariş oluşturulacak
+	orders_data = {}  # key: (supplier_id, category_id), value: list of items
+	
+	for i in range(len(category_ids)):
+		cat_id = category_ids[i] if i < len(category_ids) else ''
+		sup_id = supplier_ids[i] if i < len(supplier_ids) else ''
+		prod_id = product_ids[i] if i < len(product_ids) else ''
+		qty = quantities[i] if i < len(quantities) else ''
+		price = unit_prices[i] if i < len(unit_prices) else ''
+		desc = descriptions[i] if i < len(descriptions) else ''
+		
+		if cat_id and sup_id and qty and price:
+			try:
+				key = (int(sup_id), int(cat_id))
+				item = {
+					'product_id': int(prod_id) if prod_id else None,
+					'quantity': int(qty),
+					'unit_price': Decimal(price),
+					'description': desc.strip() if desc else '',
+				}
+				if key not in orders_data:
+					orders_data[key] = []
+				orders_data[key].append(item)
+			except (ValueError, InvalidOperation):
+				continue
+	
+	if not orders_data:
+		messages.error(request, "En az bir geçerli sipariş satırı ekleyin.")
+		return redirect('customer_detail', pk=customer_id)
+	
+	created_orders = []
+	
+	for (supplier_id, category_id), items in orders_data.items():
+		try:
+			category = Category.objects.get(id=category_id, organization=org)
+			supplier = Supplier.objects.get(id=supplier_id, organizations=org)
+		except (Category.DoesNotExist, Supplier.DoesNotExist):
+			continue
+		
+		# Toplam hesapla
+		total_qty = sum(item['quantity'] for item in items)
+		grand_total = sum(item['quantity'] * item['unit_price'] for item in items)
+		
+		# Sipariş başlığı (birden fazla tedarikçi varsa ayırt edici ekle)
+		order_title = title
+		if len(orders_data) > 1:
+			order_title = f"{title} - {supplier.name}"
+		
+		# Create ticket
+		ticket = Ticket.objects.create(
+			organization=org,
+			customer=customer,
+			category=category,
+			title=order_title,
+			description=description,
+			desired_quantity=total_qty,
+			status='closed',
+		)
+		
+		# Create order
+		order = Order.objects.create(
+			organization=org,
+			ticket=ticket,
+			supplier=supplier,
+			status='new',
+			currency=currency,
+			total=grand_total,
+		)
+		
+		# Create order items
+		for item in items:
+			product = None
+			if item['product_id']:
+				try:
+					product = SupplierProduct.objects.get(id=item['product_id'], organization=org)
+				except SupplierProduct.DoesNotExist:
+					pass
+			
+			item_total = item['quantity'] * item['unit_price']
+			OrderItem.objects.create(
+				order=order,
+				product=product,
+				description=item['description'] or (product.name if product else order_title),
+				quantity=item['quantity'],
+				supplier_unit_price=item['unit_price'],
+				owner_markup_total=Decimal('0.00'),
+				sell_total=item_total,
+			)
+		
+		created_orders.append(order.id)
+	
+	if len(created_orders) == 1:
+		messages.success(request, f"Sipariş #{created_orders[0]} başarıyla oluşturuldu.")
+	elif len(created_orders) > 1:
+		messages.success(request, f"{len(created_orders)} ayrı sipariş oluşturuldu: #{', #'.join(map(str, created_orders))}")
+	else:
+		messages.error(request, "Sipariş oluşturulamadı.")
+	
+	return redirect('customer_detail', pk=customer_id)
+
+
+@login_required
+@page_permission_required('orders_manage')
+def customer_save_order_template(request, customer_id: int):
+	"""Sipariş şablonu kaydet"""
+	org = getattr(request, "tenant", None)
+	customer = get_object_or_404(Customer, id=customer_id, organization=org)
+	
+	if request.method != 'POST':
+		return JsonResponse({'success': False, 'error': 'POST required'})
+	
+	import json
+	try:
+		data = json.loads(request.body)
+	except json.JSONDecodeError:
+		return JsonResponse({'success': False, 'error': 'Invalid JSON'})
+	
+	template_name = data.get('name', '').strip()
+	currency = data.get('currency', 'TRY')
+	items = data.get('items', [])
+	
+	if not template_name:
+		return JsonResponse({'success': False, 'error': 'Şablon adı gerekli'})
+	
+	if not items:
+		return JsonResponse({'success': False, 'error': 'En az bir satır gerekli'})
+	
+	# Mevcut şablonu güncelle veya yeni oluştur
+	template, created = OrderTemplate.objects.update_or_create(
+		organization=org,
+		customer=customer,
+		name=template_name,
+		defaults={'currency': currency, 'description': ''}
+	)
+	
+	# Mevcut kalemleri sil
+	template.items.all().delete()
+	
+	# Yeni kalemleri ekle
+	for item in items:
+		try:
+			category = Category.objects.get(id=item.get('category_id'), organization=org)
+			supplier = Supplier.objects.get(id=item.get('supplier_id'), organizations=org)
+			product = None
+			if item.get('product_id'):
+				product = SupplierProduct.objects.filter(id=item.get('product_id'), organization=org).first()
+			
+			OrderTemplateItem.objects.create(
+				template=template,
+				category=category,
+				supplier=supplier,
+				product=product,
+				description=item.get('description', ''),
+				quantity=int(item.get('quantity', 1)),
+				unit_price=Decimal(str(item.get('unit_price', 0))),
+			)
+		except (Category.DoesNotExist, Supplier.DoesNotExist, ValueError):
+			continue
+	
+	return JsonResponse({
+		'success': True,
+		'message': f"Şablon '{template_name}' {'oluşturuldu' if created else 'güncellendi'}",
+		'template_id': template.id
+	})
+
+
+@login_required
+@page_permission_required('orders_manage')
+def customer_order_templates_list(request, customer_id: int):
+	"""Müşterinin sipariş şablonlarını listele (JSON)"""
+	org = getattr(request, "tenant", None)
+	customer = get_object_or_404(Customer, id=customer_id, organization=org)
+	
+	templates = OrderTemplate.objects.filter(organization=org, customer=customer)
+	
+	data = []
+	for t in templates:
+		data.append({
+			'id': t.id,
+			'name': t.name,
+			'currency': t.currency,
+			'total_items': t.total_items,
+			'total_amount': float(t.total_amount),
+			'updated_at': t.updated_at.strftime('%d.%m.%Y %H:%M'),
+		})
+	
+	return JsonResponse({'templates': data})
+
+
+@login_required
+@page_permission_required('orders_manage')
+def customer_order_template_detail(request, customer_id: int, template_id: int):
+	"""Sipariş şablonu detayı (JSON) - yükleme için"""
+	org = getattr(request, "tenant", None)
+	customer = get_object_or_404(Customer, id=customer_id, organization=org)
+	template = get_object_or_404(OrderTemplate, id=template_id, organization=org, customer=customer)
+	
+	items = []
+	for item in template.items.all():
+		items.append({
+			'category_id': item.category_id,
+			'supplier_id': item.supplier_id,
+			'product_id': item.product_id,
+			'description': item.description,
+			'quantity': item.quantity,
+			'unit_price': float(item.unit_price),
+		})
+	
+	return JsonResponse({
+		'id': template.id,
+		'name': template.name,
+		'currency': template.currency,
+		'items': items,
+	})
+
+
+@login_required
+@page_permission_required('orders_manage')
+def customer_order_template_delete(request, customer_id: int, template_id: int):
+	"""Sipariş şablonu sil"""
+	org = getattr(request, "tenant", None)
+	customer = get_object_or_404(Customer, id=customer_id, organization=org)
+	template = get_object_or_404(OrderTemplate, id=template_id, organization=org, customer=customer)
+	
+	if request.method == 'POST':
+		name = template.name
+		template.delete()
+		return JsonResponse({'success': True, 'message': f"Şablon '{name}' silindi"})
+	
+	return JsonResponse({'success': False, 'error': 'POST required'})
+
+
+@login_required
+@page_permission_required('products_manage')
+def customer_add_product(request, customer_id: int):
+	"""Ürün ekle (müşteri detay sayfasından)"""
+	org = getattr(request, "tenant", None)
+	customer = get_object_or_404(Customer, id=customer_id, organization=org)
+	
+	if request.method != 'POST':
+		return redirect('customer_detail', pk=customer_id)
+	
+	supplier_id = request.POST.get('supplier')
+	name = request.POST.get('name', '').strip()
+	description = request.POST.get('description', '').strip()
+	base_price = request.POST.get('base_price')
+	currency = request.POST.get('currency', 'TRY')
+	sku = request.POST.get('sku', '').strip()
+	
+	if not supplier_id or not name:
+		messages.error(request, "Tedarikçi ve ürün adı zorunludur.")
+		return redirect('customer_detail', pk=customer_id)
+	
+	try:
+		supplier = Supplier.objects.get(id=supplier_id, organizations=org)
+	except Supplier.DoesNotExist:
+		messages.error(request, "Geçersiz tedarikçi.")
+		return redirect('customer_detail', pk=customer_id)
+	
+	# Create product
+	product = SupplierProduct.objects.create(
+		organization=org,
+		supplier=supplier,
+		name=name,
+		description=description,
+		base_price=Decimal(base_price) if base_price else None,
+		currency=currency,
+		sku=sku or None,
+		is_active=True,
+	)
+	
+	messages.success(request, f"'{product.name}' ürünü başarıyla eklendi.")
+	return redirect('customer_detail', pk=customer_id)
 
 
 @login_required

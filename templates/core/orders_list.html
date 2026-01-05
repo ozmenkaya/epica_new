@@ -3,10 +3,15 @@
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h4 class="mb-0">{% trans "Siparişler" %}</h4>
-  <form method="get" class="d-flex" role="search" style="max-width:400px;">
-    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="{% trans "Ara: talep, müşteri, tedarikçi" %}">
-  </form>
+  <div class="d-flex gap-2">
+    <form method="get" class="d-flex" role="search" style="max-width:400px;">
+      <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="{% trans "Ara: talep, müşteri, tedarikçi" %}">
+    </form>
+    {% if 'orders_manage' in tenant_permissions %}
+      <a href="{% url 'orders_create' %}" class="btn btn-primary">{% trans "Yeni Sipariş" %}</a>
+    {% endif %}
   </div>
+</div>
 <div class="card shadow-sm">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">

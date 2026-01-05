@@ -9,6 +9,11 @@
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'categories_list' %}">{% trans "Listeye Dön" %}</a>
   </div>
   <div class="card-body">
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger mb-3">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
     <form method="post" novalidate>
       {% csrf_token %}
       {% for field in form %}

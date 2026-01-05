@@ -1,23 +1,29 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% load form_tags %}
-{% block title %}{{ org.name }} - {% trans "Yeni Ürün" %}{% endblock %}
+{% block title %}{{ org.name }} - {% if edit_mode %}{% trans "Ürün Düzenle" %}{% else %}{% trans "Yeni Ürün" %}{% endif %}{% endblock %}
 {% block content %}
 <div class="card shadow-sm">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">{% trans "Yeni Ürün" %}</h5>
+    <h5 class="mb-0">{% if edit_mode %}{% trans "Ürün Düzenle" %}{% else %}{% trans "Yeni Ürün" %}{% endif %}</h5>
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'owner_products_list' %}">{% trans "Ürün Listesi" %}</a>
   </div>
   <div class="card-body">
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger mb-3">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
     <form method="post" novalidate>
       {% csrf_token %}
       <div class="row g-3">
         <div class="col-md-4">{% bootstrap_field form.supplier %}</div>
         <div class="col-md-4">{% bootstrap_field form.category %}</div>
-        <div class="col-md-4">{% bootstrap_field form.name %}</div>
-        <div class="col-12">{% bootstrap_field form.description %}</div>
+        <div class="col-md-4">{% bootstrap_field form.customer %}</div>
+        <div class="col-md-6">{% bootstrap_field form.name %}</div>
         <div class="col-md-3">{% bootstrap_field form.base_price %}</div>
         <div class="col-md-3">{% bootstrap_field form.is_active %}</div>
+        <div class="col-12">{% bootstrap_field form.description %}</div>
       </div>
       <div class="d-flex gap-2 mt-3">
         <button class="btn btn-primary" type="submit">{% trans "Kaydet" %}</button>

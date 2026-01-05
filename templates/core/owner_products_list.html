@@ -21,9 +21,12 @@
             <th>{% trans "Ürün" %}</th>
             <th>{% trans "Tedarikçi" %}</th>
             <th>{% trans "Kategori" %}</th>
+            <th>{% trans "Müşteri" %}</th>
             <th>{% trans "Liste Fiyatı" %}</th>
             <th>{% trans "Durum" %}</th>
-            <th>{% trans "Müşteriler" %}</th>
+            {% if 'products_manage' in tenant_permissions %}
+            <th class="text-end">{% trans "İşlemler" %}</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -32,20 +35,18 @@
               <td>{{ p.name }}</td>
               <td>{{ p.supplier.name }}</td>
               <td>{{ p.category.name }}</td>
+              <td>{% if p.customer %}{{ p.customer.name }}{% else %}<span class="badge text-bg-info">Genel</span>{% endif %}</td>
               <td>{% if p.base_price %}{{ p.base_price }}{% else %}-{% endif %}</td>
               <td>{% if p.is_active %}<span class="badge text-bg-success">{% trans "Aktif" %}</span>{% else %}<span class="badge text-bg-secondary">{% trans "Pasif" %}</span>{% endif %}</td>
-              <td>
-                {% if buyers_list %}
-                  {% for name in buyers_list %}
-                    <span class="badge text-bg-light border me-1">{{ name }}</span>
-                  {% endfor %}
-                {% else %}
-                  <span class="text-muted">{% trans "Henüz sipariş yok" %}</span>
-                {% endif %}
+              {% if 'products_manage' in tenant_permissions %}
+              <td class="text-end">
+                <a href="{% url 'owner_products_edit' p.pk %}" class="btn btn-sm btn-outline-primary" title="{% trans 'Düzenle' %}"><i class="bi bi-pencil"></i></a>
+                <a href="{% url 'owner_products_delete' p.pk %}" class="btn btn-sm btn-outline-danger" title="{% trans 'Sil' %}"><i class="bi bi-trash"></i></a>
               </td>
+              {% endif %}
             </tr>
           {% empty %}
-            <tr><td colspan="6" class="text-center text-muted">{% trans "Ürün yok" %}</td></tr>
+            <tr><td colspan="{% if 'products_manage' in tenant_permissions %}7{% else %}6{% endif %}" class="text-center text-muted">{% trans "Ürün yok" %}</td></tr>
           {% endfor %}
         </tbody>
       </table>

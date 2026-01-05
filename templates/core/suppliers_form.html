@@ -30,6 +30,11 @@
         </form>
       </div>
     {% else %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger mb-3">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
       <div id="existing-supplier-alert" class="alert alert-info d-none mb-3">
         <i class="bi bi-info-circle"></i>
         <span id="existing-supplier-message"></span>
@@ -54,6 +59,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const alertBox = document.getElementById('existing-supplier-alert');
   const alertMessage = document.getElementById('existing-supplier-message');
   const loginFields = ['id_login_username', 'id_login_password1', 'id_login_password2'];
+  const submitBtn = document.querySelector('#supplier-form button[type="submit"]');
+  
+  // Ensure submit button is enabled on page load
+  if (submitBtn) submitBtn.disabled = false;
   
   if (emailInput) {
     emailInput.addEventListener('blur', function() {
@@ -106,8 +115,15 @@ document.addEventListener('DOMContentLoaded', function() {
       if (field) {
         const formGroup = field.closest('.mb-3');
         if (formGroup) formGroup.style.display = 'none';
+        // Clear the field value to prevent validation issues
+        field.value = '';
+        field.classList.remove('is-invalid', 'is-valid');
       }
     });
+    // Clear username feedback and enable submit button
+    const feedbackDiv = document.getElementById('username-feedback');
+    if (feedbackDiv) feedbackDiv.innerHTML = '';
+    if (submitBtn) submitBtn.disabled = false;
   }
   
   function showLoginFields() {
@@ -117,6 +133,63 @@ document.addEventListener('DOMContentLoaded', function() {
         const formGroup = field.closest('.mb-3');
         if (formGroup) formGroup.style.display = '';
       }
+    });
+  }
+  
+  // Username availability check
+  const usernameInput = document.getElementById('id_login_username');
+  
+  if (usernameInput) {
+    // Create feedback element
+    const feedbackDiv = document.createElement('div');
+    feedbackDiv.id = 'username-feedback';
+    feedbackDiv.className = 'mt-1';
+    usernameInput.parentNode.appendChild(feedbackDiv);
+    
+    let debounceTimer;
+    
+    usernameInput.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      const username = this.value.trim();
+      
+      if (!username) {
+        feedbackDiv.innerHTML = '';
+        usernameInput.classList.remove('is-invalid', 'is-valid');
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+      
+      debounceTimer = setTimeout(function() {
+        // Get current user id if editing existing supplier
+        const excludeUserId = '{{ obj.user.id|default:"" }}';
+        let url = '{% url "check_username" %}?username=' + encodeURIComponent(username);
+        if (excludeUserId) {
+          url += '&exclude_user_id=' + excludeUserId;
+        }
+        
+        fetch(url, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.exists) {
+            feedbackDiv.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> ' + data.message + '</small>';
+            usernameInput.classList.add('is-invalid');
+            usernameInput.classList.remove('is-valid');
+            if (submitBtn) submitBtn.disabled = true;
+          } else {
+            feedbackDiv.innerHTML = '<small class="text-success"><i class="bi bi-check-circle"></i> Kullanılabilir</small>';
+            usernameInput.classList.add('is-valid');
+            usernameInput.classList.remove('is-invalid');
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        })
+        .catch(err => {
+          console.error('Username check error:', err);
+          feedbackDiv.innerHTML = '';
+          if (submitBtn) submitBtn.disabled = false;
+        });
+      }, 400);
     });
   }
 });

@@ -9,10 +9,25 @@
 			<h4 class="mb-0">
 				<i class="bi bi-person-circle"></i> {{ customer.name }}
 			</h4>
-			<div>
+			<div class="d-flex gap-2 flex-wrap">
+				{% if 'tickets_create' in tenant_permissions %}
+					<button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#createTicketModal">
+						<i class="bi bi-plus-circle"></i> {% trans "Talep Oluştur" %}
+					</button>
+				{% endif %}
+				{% if 'orders_manage' in tenant_permissions %}
+					<button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createOrderModal">
+						<i class="bi bi-bag-plus"></i> {% trans "Sipariş Ver" %}
+					</button>
+				{% endif %}
+				{% if 'products_manage' in tenant_permissions %}
+					<button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#addProductModal">
+						<i class="bi bi-box-seam"></i> {% trans "Ürün Ekle" %}
+					</button>
+				{% endif %}
 				{% if 'customers_edit' in tenant_permissions %}
 					<button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#reviewModal">
-						<i class="bi bi-star"></i> {% trans "Değerlendirme Ekle" %}
+						<i class="bi bi-star"></i> {% trans "Değerlendir" %}
 					</button>
 					<a class="btn btn-sm btn-outline-primary" href="{% url 'customers_edit' customer.id %}">
 						<i class="bi bi-pencil"></i> {% trans "Düzenle" %}
@@ -283,6 +298,66 @@
 	</div>
 	{% endif %}
 
+	<!-- Ürünler -->
+	<div class="card shadow-sm mb-4">
+		<div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+			<h5 class="mb-0">
+				<i class="bi bi-box-seam"></i> {% trans "Ürünler" %}
+			</h5>
+			{% if 'products_manage' in tenant_permissions %}
+				<button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#addProductModal">
+					<i class="bi bi-plus"></i> {% trans "Ürün Ekle" %}
+				</button>
+			{% endif %}
+		</div>
+		<div class="card-body">
+			<div class="table-responsive">
+				<table class="table table-sm table-hover">
+					<thead class="table-light">
+						<tr>
+							<th>{% trans "Ürün Adı" %}</th>
+							<th>{% trans "Tedarikçi" %}</th>
+							<th>{% trans "Fiyat" %}</th>
+							<th>{% trans "SKU" %}</th>
+							<th>{% trans "Durum" %}</th>
+						</tr>
+					</thead>
+					<tbody>
+					{% for product in products %}
+						<tr>
+							<td>{{ product.name }}</td>
+							<td>
+								<a href="{% url 'supplier_detail' product.supplier.id %}">{{ product.supplier.name }}</a>
+							</td>
+							<td>
+								{% if product.base_price %}
+									{{ product.base_price }} {{ product.currency }}
+								{% else %}
+									<span class="text-muted">-</span>
+								{% endif %}
+							</td>
+							<td><small class="text-muted">{{ product.sku|default:"-" }}</small></td>
+							<td>
+								{% if product.is_active %}
+									<span class="badge bg-success">{% trans "Aktif" %}</span>
+								{% else %}
+									<span class="badge bg-secondary">{% trans "Pasif" %}</span>
+								{% endif %}
+							</td>
+						</tr>
+					{% empty %}
+						<tr>
+							<td colspan="5" class="text-center text-muted py-4">
+								{% trans "Henüz ürün eklenmemiş." %}
+							</td>
+						</tr>
+					{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
 	<!-- Talepler (Tickets) -->
 	<div class="card shadow-sm mb-4">
 		<div class="card-header bg-light">
@@ -335,6 +410,256 @@
 					</tbody>
 				</table>
 			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Talep Oluştur Modal -->
+<div class="modal fade" id="createTicketModal" tabindex="-1" aria-labelledby="createTicketModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<form method="post" action="{% url 'customer_create_ticket' customer.id %}" id="createTicketForm">
+				{% csrf_token %}
+				<div class="modal-header bg-success text-white">
+					<h5 class="modal-title" id="createTicketModalLabel">
+						<i class="bi bi-plus-circle"></i> {% trans "Talep Oluştur" %} - {{ customer.name }}
+					</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="row g-3">
+						<div class="col-md-6">
+							<label class="form-label">{% trans "Kategori" %} *</label>
+							<select name="category" class="form-select" required>
+								<option value="">{% trans "Seçiniz..." %}</option>
+								{% for cat in categories %}
+									<option value="{{ cat.id }}">{{ cat.name }}</option>
+								{% endfor %}
+							</select>
+						</div>
+						<div class="col-md-6">
+							<label class="form-label">{% trans "Başlık" %} *</label>
+							<input type="text" name="title" class="form-control" required>
+						</div>
+						<div class="col-12">
+							<label class="form-label">{% trans "Açıklama" %}</label>
+							<textarea name="description" class="form-control" rows="3"></textarea>
+						</div>
+						<div class="col-md-4">
+							<label class="form-label">{% trans "Miktar" %}</label>
+							<input type="number" name="quantity" class="form-control" min="1" value="1">
+						</div>
+						<div class="col-md-4">
+							<label class="form-label">{% trans "Birim" %}</label>
+							<input type="text" name="unit" class="form-control" placeholder="adet, kg, lt...">
+						</div>
+						<div class="col-md-4">
+							<label class="form-label">{% trans "Termin Tarihi" %}</label>
+							<input type="date" name="deadline" class="form-control">
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "İptal" %}</button>
+					<button type="submit" class="btn btn-success">
+						<i class="bi bi-check-circle"></i> {% trans "Talep Oluştur" %}
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<!-- Sipariş Oluştur Modal -->
+<div class="modal fade" id="createOrderModal" tabindex="-1" aria-labelledby="createOrderModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-xl">
+		<div class="modal-content">
+			<form method="post" action="{% url 'customer_create_order' customer.id %}" id="createOrderForm">
+				{% csrf_token %}
+				<div class="modal-header bg-primary text-white">
+					<h5 class="modal-title" id="createOrderModalLabel">
+						<i class="bi bi-bag-plus"></i> {% trans "Sipariş Ver" %} - {{ customer.name }}
+					</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="row g-3 mb-4">
+						<div class="col-md-6">
+							<label class="form-label">{% trans "Sipariş Başlığı" %} *</label>
+							<input type="text" name="title" id="order_title" class="form-control" required placeholder="Örn: Haftalık sipariş">
+						</div>
+						<div class="col-md-3">
+							<label class="form-label">{% trans "Para Birimi" %}</label>
+							<select name="currency" class="form-select">
+								{% for code, label in currency_choices %}
+									<option value="{{ code }}" {% if code == "TRY" %}selected{% endif %}>{{ label }}</option>
+								{% endfor %}
+							</select>
+						</div>
+						<div class="col-md-3">
+							<label class="form-label">{% trans "Açıklama" %}</label>
+							<input type="text" name="description" class="form-control" placeholder="Opsiyonel not">
+						</div>
+					</div>
+					
+					<div class="alert alert-info small py-2">
+						<i class="bi bi-info-circle"></i> {% trans "Farklı tedarikçiler için ayrı siparişler otomatik oluşturulur." %}
+					</div>
+					
+					<h6 class="mb-3"><i class="bi bi-list-ul"></i> {% trans "Sipariş Kalemleri" %}</h6>
+					
+					<div id="orderItemsContainer">
+						<!-- İlk satır -->
+						<div class="row g-2 mb-2 order-item-row align-items-end">
+							<div class="col-md-2">
+								<label class="form-label small">{% trans "Kategori" %} *</label>
+								<select name="item_category[]" class="form-select form-select-sm item-category" required>
+									<option value="">{% trans "Seçiniz..." %}</option>
+									{% for cat in categories %}
+										<option value="{{ cat.id }}">{{ cat.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="col-md-2">
+								<label class="form-label small">{% trans "Tedarikçi" %} *</label>
+								<select name="item_supplier[]" class="form-select form-select-sm item-supplier" required>
+									<option value="">{% trans "Seçiniz..." %}</option>
+									{% for sup in suppliers %}
+										<option value="{{ sup.id }}">{{ sup.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="col-md-2">
+								<label class="form-label small">{% trans "Ürün" %}</label>
+								<select name="item_product[]" class="form-select form-select-sm item-product">
+									<option value="">{% trans "Ürün seçin..." %}</option>
+								</select>
+							</div>
+							<div class="col-md-2">
+								<label class="form-label small">{% trans "Açıklama" %} *</label>
+								<input type="text" name="item_description[]" class="form-control form-control-sm item-description" placeholder="Ürün açıklaması" required>
+							</div>
+							<div class="col-md-1">
+								<label class="form-label small">{% trans "Miktar" %} *</label>
+								<input type="number" name="item_quantity[]" class="form-control form-control-sm item-quantity" min="1" value="1" required>
+							</div>
+							<div class="col-md-2">
+								<label class="form-label small">{% trans "Birim Fiyat" %} *</label>
+								<input type="number" name="item_unit_price[]" class="form-control form-control-sm item-unit-price" step="0.01" min="0" required>
+							</div>
+							<div class="col-md-1">
+								<label class="form-label small">&nbsp;</label>
+								<button type="button" class="btn btn-sm btn-outline-danger remove-item-btn d-block" disabled title="{% trans 'Satır Sil' %}">
+									<i class="bi bi-trash"></i>
+								</button>
+							</div>
+						</div>
+					</div>
+					
+					<button type="button" id="addItemBtn" class="btn btn-sm btn-outline-success mt-2">
+						<i class="bi bi-plus-circle"></i> {% trans "Satır Ekle" %}
+					</button>
+					
+					<hr class="mt-4">
+					<div class="row">
+						<div class="col-md-4">
+							<!-- Şablon Yükle -->
+							<div class="d-flex gap-2 align-items-center">
+								<select id="templateSelect" class="form-select form-select-sm">
+									<option value="">{% trans "Şablon Yükle..." %}</option>
+									{% for t in order_templates %}
+										<option value="{{ t.id }}">{{ t.name }} ({{ t.total_items }} kalem)</option>
+									{% endfor %}
+								</select>
+								<button type="button" id="loadTemplateBtn" class="btn btn-sm btn-outline-info" title="{% trans 'Şablonu Yükle' %}">
+									<i class="bi bi-download"></i>
+								</button>
+							</div>
+						</div>
+						<div class="col-md-4">
+							<!-- Şablon Kaydet -->
+							<div class="input-group input-group-sm">
+								<input type="text" id="templateNameInput" class="form-control" placeholder="{% trans 'Şablon adı...' %}">
+								<button type="button" id="saveTemplateBtn" class="btn btn-outline-success" title="{% trans 'Şablon Olarak Kaydet' %}">
+									<i class="bi bi-save"></i> {% trans "Kaydet" %}
+								</button>
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
+								<strong>{% trans "Toplam:" %}</strong>
+								<strong id="orderGrandTotal">0.00</strong>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "İptal" %}</button>
+					<button type="submit" class="btn btn-primary">
+						<i class="bi bi-bag-check"></i> {% trans "Sipariş Oluştur" %}
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<!-- Ürün Ekle Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form method="post" action="{% url 'customer_add_product' customer.id %}" id="addProductForm">
+				{% csrf_token %}
+				<div class="modal-header bg-info text-white">
+					<h5 class="modal-title" id="addProductModalLabel">
+						<i class="bi bi-box-seam"></i> {% trans "Ürün Ekle" %}
+					</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="row g-3">
+						<div class="col-12">
+							<label class="form-label">{% trans "Tedarikçi" %} *</label>
+							<select name="supplier" id="product_supplier" class="form-select" required>
+								<option value="">{% trans "Seçiniz..." %}</option>
+								{% for sup in suppliers %}
+									<option value="{{ sup.id }}">{{ sup.name }}</option>
+								{% endfor %}
+							</select>
+						</div>
+						<div class="col-12">
+							<label class="form-label">{% trans "Ürün Adı" %} *</label>
+							<input type="text" name="name" class="form-control" required>
+						</div>
+						<div class="col-12">
+							<label class="form-label">{% trans "Açıklama" %}</label>
+							<textarea name="description" class="form-control" rows="2"></textarea>
+						</div>
+						<div class="col-md-6">
+							<label class="form-label">{% trans "Temel Fiyat" %}</label>
+							<input type="number" name="base_price" class="form-control" step="0.01" min="0">
+						</div>
+						<div class="col-md-6">
+							<label class="form-label">{% trans "Para Birimi" %}</label>
+							<select name="currency" class="form-select">
+								{% for code, label in currency_choices %}
+									<option value="{{ code }}" {% if code == "TRY" %}selected{% endif %}>{{ label }}</option>
+								{% endfor %}
+							</select>
+						</div>
+						<div class="col-12">
+							<label class="form-label">{% trans "SKU (Stok Kodu)" %}</label>
+							<input type="text" name="sku" class="form-control" placeholder="Opsiyonel">
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "İptal" %}</button>
+					<button type="submit" class="btn btn-info text-white">
+						<i class="bi bi-plus-circle"></i> {% trans "Ürün Ekle" %}
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
 </div>
@@ -565,6 +890,382 @@ document.addEventListener('DOMContentLoaded', function() {
 				icon.classList.add('bi-star');
 			}
 		});
+	}
+	
+	// Sipariş formu - her satırda kategori, tedarikçi ve ürün filtreleme
+	const orderItemsContainer = document.getElementById('orderItemsContainer');
+	const addItemBtn = document.getElementById('addItemBtn');
+	const orderGrandTotal = document.getElementById('orderGrandTotal');
+	
+	const allProducts = {{ products_json|safe }};
+	const allSuppliers = {{ suppliers_json|safe }};
+	const categorySuppliers = {{ category_suppliers_json|safe }};
+	
+	// Satır ekleme
+	if (addItemBtn) {
+		addItemBtn.addEventListener('click', function() {
+			const newRow = document.createElement('div');
+			newRow.className = 'row g-2 mb-2 order-item-row align-items-end';
+			newRow.innerHTML = `
+				<div class="col-md-2">
+					<select name="item_category[]" class="form-select form-select-sm item-category" required>
+						<option value="">{% trans "Seçiniz..." %}</option>
+						{% for cat in categories %}
+							<option value="{{ cat.id }}">{{ cat.name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="col-md-2">
+					<select name="item_supplier[]" class="form-select form-select-sm item-supplier" required>
+						<option value="">{% trans "Seçiniz..." %}</option>
+						{% for sup in suppliers %}
+							<option value="{{ sup.id }}">{{ sup.name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="col-md-2">
+					<select name="item_product[]" class="form-select form-select-sm item-product">
+						<option value="">{% trans "Ürün seçin..." %}</option>
+					</select>
+				</div>
+				<div class="col-md-2">
+					<input type="text" name="item_description[]" class="form-control form-control-sm item-description" placeholder="Ürün açıklaması" required>
+				</div>
+				<div class="col-md-1">
+					<input type="number" name="item_quantity[]" class="form-control form-control-sm item-quantity" min="1" value="1" required>
+				</div>
+				<div class="col-md-2">
+					<input type="number" name="item_unit_price[]" class="form-control form-control-sm item-unit-price" step="0.01" min="0" required>
+				</div>
+				<div class="col-md-1">
+					<button type="button" class="btn btn-sm btn-outline-danger remove-item-btn d-block" title="{% trans 'Satır Sil' %}">
+						<i class="bi bi-trash"></i>
+					</button>
+				</div>
+			`;
+			orderItemsContainer.appendChild(newRow);
+			updateRemoveButtons();
+			attachRowEventListeners(newRow);
+		});
+	}
+	
+	// Silme butonlarını güncelle
+	function updateRemoveButtons() {
+		const rows = orderItemsContainer.querySelectorAll('.order-item-row');
+		rows.forEach((row, index) => {
+			const btn = row.querySelector('.remove-item-btn');
+			if (btn) {
+				btn.disabled = rows.length <= 1;
+			}
+		});
+	}
+	
+	// Satır bazında tedarikçileri filtrele
+	function filterSuppliersForRow(row) {
+		const categorySelect = row.querySelector('.item-category');
+		const supplierSelect = row.querySelector('.item-supplier');
+		const productSelect = row.querySelector('.item-product');
+		
+		const categoryId = parseInt(categorySelect.value);
+		const currentSupplierValue = supplierSelect.value;
+		
+		supplierSelect.innerHTML = '<option value="">{% trans "Seçiniz..." %}</option>';
+		productSelect.innerHTML = '<option value="">{% trans "Ürün seçin..." %}</option>';
+		
+		let suppliersToShow = allSuppliers;
+		if (categoryId && categorySuppliers[categoryId]) {
+			const allowedIds = categorySuppliers[categoryId];
+			if (allowedIds.length > 0) {
+				suppliersToShow = allSuppliers.filter(s => allowedIds.includes(s.id));
+			}
+		}
+		
+		suppliersToShow.forEach(s => {
+			const opt = document.createElement('option');
+			opt.value = s.id;
+			opt.textContent = s.name;
+			if (s.id == currentSupplierValue) opt.selected = true;
+			supplierSelect.appendChild(opt);
+		});
+	}
+	
+	// Satır bazında ürünleri filtrele
+	function filterProductsForRow(row) {
+		const supplierSelect = row.querySelector('.item-supplier');
+		const productSelect = row.querySelector('.item-product');
+		
+		const supplierId = parseInt(supplierSelect.value);
+		productSelect.innerHTML = '<option value="">{% trans "Ürün seçin..." %}</option>';
+		
+		if (supplierId) {
+			const filtered = allProducts.filter(p => p.supplier_id === supplierId);
+			filtered.forEach(p => {
+				const opt = document.createElement('option');
+				opt.value = p.id;
+				opt.textContent = p.name + (p.base_price ? ' (' + p.base_price + ' TRY)' : '');
+				opt.dataset.price = p.base_price || '';
+				opt.dataset.name = p.name;
+				productSelect.appendChild(opt);
+			});
+		}
+	}
+	
+	// Satır event listener'ları
+	function attachRowEventListeners(row) {
+		const categorySelect = row.querySelector('.item-category');
+		const supplierSelect = row.querySelector('.item-supplier');
+		const productSelect = row.querySelector('.item-product');
+		const descInput = row.querySelector('.item-description');
+		const priceInput = row.querySelector('.item-unit-price');
+		const qtyInput = row.querySelector('.item-quantity');
+		const removeBtn = row.querySelector('.remove-item-btn');
+		
+		// Kategori değişince tedarikçileri filtrele
+		if (categorySelect) {
+			categorySelect.addEventListener('change', function() {
+				filterSuppliersForRow(row);
+			});
+		}
+		
+		// Tedarikçi değişince ürünleri filtrele
+		if (supplierSelect) {
+			supplierSelect.addEventListener('change', function() {
+				filterProductsForRow(row);
+			});
+		}
+		
+		// Ürün seçilince açıklama ve fiyat doldur
+		if (productSelect) {
+			productSelect.addEventListener('change', function() {
+				const selectedOption = this.options[this.selectedIndex];
+				if (selectedOption && selectedOption.value) {
+					if (selectedOption.dataset.name) {
+						descInput.value = selectedOption.dataset.name;
+					}
+					if (selectedOption.dataset.price) {
+						priceInput.value = selectedOption.dataset.price;
+					}
+					calculateTotal();
+				}
+			});
+		}
+		
+		if (qtyInput) qtyInput.addEventListener('input', calculateTotal);
+		if (priceInput) priceInput.addEventListener('input', calculateTotal);
+		
+		if (removeBtn) {
+			removeBtn.addEventListener('click', function() {
+				row.remove();
+				updateRemoveButtons();
+				calculateTotal();
+			});
+		}
+	}
+	
+	// Toplam hesapla
+	function calculateTotal() {
+		let total = 0;
+		const rows = orderItemsContainer.querySelectorAll('.order-item-row');
+		rows.forEach(row => {
+			const qty = parseFloat(row.querySelector('.item-quantity').value) || 0;
+			const price = parseFloat(row.querySelector('.item-unit-price').value) || 0;
+			total += qty * price;
+		});
+		orderGrandTotal.textContent = total.toFixed(2);
+	}
+	
+	// İlk satır için event listener'ları ekle
+	const firstRow = orderItemsContainer.querySelector('.order-item-row');
+	if (firstRow) {
+		attachRowEventListeners(firstRow);
+	}
+	
+	// Şablon işlemleri
+	const templateSelect = document.getElementById('templateSelect');
+	const loadTemplateBtn = document.getElementById('loadTemplateBtn');
+	const saveTemplateBtn = document.getElementById('saveTemplateBtn');
+	const templateNameInput = document.getElementById('templateNameInput');
+	const customerId = {{ customer.id }};
+	
+	// Şablon kaydet
+	if (saveTemplateBtn) {
+		saveTemplateBtn.addEventListener('click', function() {
+			const templateName = templateNameInput.value.trim();
+			if (!templateName) {
+				alert('{% trans "Şablon adı girin" %}');
+				return;
+			}
+			
+			const rows = orderItemsContainer.querySelectorAll('.order-item-row');
+			const items = [];
+			
+			rows.forEach(row => {
+				const categoryId = row.querySelector('.item-category').value;
+				const supplierId = row.querySelector('.item-supplier').value;
+				const productId = row.querySelector('.item-product').value;
+				const description = row.querySelector('.item-description').value;
+				const quantity = row.querySelector('.item-quantity').value;
+				const unitPrice = row.querySelector('.item-unit-price').value;
+				
+				if (categoryId && supplierId && description && quantity && unitPrice) {
+					items.push({
+						category_id: parseInt(categoryId),
+						supplier_id: parseInt(supplierId),
+						product_id: productId ? parseInt(productId) : null,
+						description: description,
+						quantity: parseInt(quantity),
+						unit_price: parseFloat(unitPrice),
+					});
+				}
+			});
+			
+			if (items.length === 0) {
+				alert('{% trans "En az bir geçerli satır ekleyin" %}');
+				return;
+			}
+			
+			const currencySelect = document.querySelector('select[name="currency"]');
+			const currency = currencySelect ? currencySelect.value : 'TRY';
+			
+			fetch(`/customers/${customerId}/order-templates/save/`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-CSRFToken': '{{ csrf_token }}',
+				},
+				body: JSON.stringify({
+					name: templateName,
+					currency: currency,
+					items: items,
+				}),
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					alert(data.message);
+					// Şablon listesini güncelle
+					const option = document.createElement('option');
+					option.value = data.template_id;
+					option.textContent = templateName + ' (' + items.length + ' kalem)';
+					templateSelect.appendChild(option);
+					templateNameInput.value = '';
+				} else {
+					alert(data.error || '{% trans "Hata oluştu" %}');
+				}
+			})
+			.catch(err => {
+				console.error(err);
+				alert('{% trans "Bağlantı hatası" %}');
+			});
+		});
+	}
+	
+	// Şablon yükle
+	if (loadTemplateBtn) {
+		loadTemplateBtn.addEventListener('click', function() {
+			const templateId = templateSelect.value;
+			if (!templateId) {
+				alert('{% trans "Şablon seçin" %}');
+				return;
+			}
+			
+			fetch(`/customers/${customerId}/order-templates/${templateId}/`)
+			.then(response => response.json())
+			.then(data => {
+				if (data.items && data.items.length > 0) {
+					// Mevcut satırları temizle
+					orderItemsContainer.innerHTML = '';
+					
+					// Yeni satırları ekle
+					data.items.forEach((item, index) => {
+						const newRow = createOrderRow();
+						orderItemsContainer.appendChild(newRow);
+						
+						// Değerleri doldur
+						const categorySelect = newRow.querySelector('.item-category');
+						const supplierSelect = newRow.querySelector('.item-supplier');
+						const productSelect = newRow.querySelector('.item-product');
+						const descInput = newRow.querySelector('.item-description');
+						const qtyInput = newRow.querySelector('.item-quantity');
+						const priceInput = newRow.querySelector('.item-unit-price');
+						
+						categorySelect.value = item.category_id;
+						filterSuppliersForRow(newRow);
+						
+						setTimeout(() => {
+							supplierSelect.value = item.supplier_id;
+							filterProductsForRow(newRow);
+							
+							setTimeout(() => {
+								if (item.product_id) productSelect.value = item.product_id;
+								descInput.value = item.description;
+								qtyInput.value = item.quantity;
+								priceInput.value = item.unit_price;
+								calculateTotal();
+							}, 50);
+						}, 50);
+						
+						attachRowEventListeners(newRow);
+					});
+					
+					updateRemoveButtons();
+					
+					// Para birimini ayarla
+					const currencySelect = document.querySelector('select[name="currency"]');
+					if (currencySelect && data.currency) {
+						currencySelect.value = data.currency;
+					}
+				}
+			})
+			.catch(err => {
+				console.error(err);
+				alert('{% trans "Şablon yüklenemedi" %}');
+			});
+		});
+	}
+	
+	// Yeni satır oluşturma fonksiyonu
+	function createOrderRow() {
+		const newRow = document.createElement('div');
+		newRow.className = 'row g-2 mb-2 order-item-row align-items-end';
+		newRow.innerHTML = `
+			<div class="col-md-2">
+				<select name="item_category[]" class="form-select form-select-sm item-category" required>
+					<option value="">{% trans "Seçiniz..." %}</option>
+					{% for cat in categories %}
+						<option value="{{ cat.id }}">{{ cat.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="col-md-2">
+				<select name="item_supplier[]" class="form-select form-select-sm item-supplier" required>
+					<option value="">{% trans "Seçiniz..." %}</option>
+					{% for sup in suppliers %}
+						<option value="{{ sup.id }}">{{ sup.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="col-md-2">
+				<select name="item_product[]" class="form-select form-select-sm item-product">
+					<option value="">{% trans "Ürün seçin..." %}</option>
+				</select>
+			</div>
+			<div class="col-md-2">
+				<input type="text" name="item_description[]" class="form-control form-control-sm item-description" placeholder="Ürün açıklaması" required>
+			</div>
+			<div class="col-md-1">
+				<input type="number" name="item_quantity[]" class="form-control form-control-sm item-quantity" min="1" value="1" required>
+			</div>
+			<div class="col-md-2">
+				<input type="number" name="item_unit_price[]" class="form-control form-control-sm item-unit-price" step="0.01" min="0" required>
+			</div>
+			<div class="col-md-1">
+				<button type="button" class="btn btn-sm btn-outline-danger remove-item-btn d-block" title="{% trans 'Satır Sil' %}">
+					<i class="bi bi-trash"></i>
+				</button>
+			</div>
+		`;
+		return newRow;
 	}
 });
 </script>

@@ -8,16 +8,82 @@
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'customers_list' %}">{% trans "Listeye Dön" %}</a>
   </div>
   <div class="card-body">
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
     <form method="post" novalidate>
       {% csrf_token %}
       {% for field in form %}
         {% bootstrap_field field %}
       {% endfor %}
       <div class="d-flex gap-2">
-        <button class="btn btn-primary" type="submit">{% trans "Kaydet" %}</button>
+        <button class="btn btn-primary" type="submit" id="submit-btn">{% trans "Kaydet" %}</button>
         <a class="btn btn-outline-secondary" href="{% url 'customers_list' %}">{% trans "İptal" %}</a>
       </div>
     </form>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usernameInput = document.getElementById('id_login_username');
+  const submitBtn = document.getElementById('submit-btn');
+  
+  if (usernameInput) {
+    // Create feedback element
+    const feedbackDiv = document.createElement('div');
+    feedbackDiv.id = 'username-feedback';
+    feedbackDiv.className = 'mt-1';
+    usernameInput.parentNode.appendChild(feedbackDiv);
+    
+    let debounceTimer;
+    
+    usernameInput.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      const username = this.value.trim();
+      
+      if (!username) {
+        feedbackDiv.innerHTML = '';
+        usernameInput.classList.remove('is-invalid', 'is-valid');
+        submitBtn.disabled = false;
+        return;
+      }
+      
+      debounceTimer = setTimeout(function() {
+        // Get current user id if editing existing customer
+        const excludeUserId = '{{ obj.user.id|default:"" }}';
+        let url = '{% url "check_username" %}?username=' + encodeURIComponent(username);
+        if (excludeUserId) {
+          url += '&exclude_user_id=' + excludeUserId;
+        }
+        
+        fetch(url, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.exists) {
+            feedbackDiv.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> ' + data.message + '</small>';
+            usernameInput.classList.add('is-invalid');
+            usernameInput.classList.remove('is-valid');
+            submitBtn.disabled = true;
+          } else {
+            feedbackDiv.innerHTML = '<small class="text-success"><i class="bi bi-check-circle"></i> Kullanılabilir</small>';
+            usernameInput.classList.add('is-valid');
+            usernameInput.classList.remove('is-invalid');
+            submitBtn.disabled = false;
+          }
+        })
+        .catch(err => {
+          console.error('Username check error:', err);
+          feedbackDiv.innerHTML = '';
+          submitBtn.disabled = false;
+        });
+      }, 400);
+    });
+  }
+});
+</script>
 {% endblock %}

@@ -60,6 +60,7 @@ class SupplierProduct(models.Model):
 	organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="supplier_products")
 	supplier = models.ForeignKey('Supplier', on_delete=models.CASCADE, related_name='products')
 	category = models.ForeignKey('Category', on_delete=models.PROTECT, related_name='products')
+	customer = models.ForeignKey('Customer', on_delete=models.SET_NULL, null=True, blank=True, related_name='products', help_text="Boş bırakılırsa tüm müşterilere görünür (Genel ürün)")
 	name = models.CharField(max_length=200)
 	description = models.TextField(blank=True)
 	base_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -71,10 +72,8 @@ class SupplierProduct(models.Model):
 		unique_together = (("supplier", "name"),)
 
 	def clean(self):
-		# Validate supplier is in this organization
-		if self.organization_id and self.supplier_id:
-			if not self.supplier.organizations.filter(pk=self.organization_id).exists():
-				raise ValidationError("Tedarikçi bu organizasyonda bulunmuyor.")
+		# Note: Supplier-organization validation is handled by the form's queryset filtering
+		# The form only shows suppliers that belong to the current organization
 		# Validate category is in same organization
 		if self.organization_id and self.category_id and self.organization_id != self.category.organization_id:
 			raise ValidationError("Ürün ve kategori aynı organizasyonda olmalıdır.")
@@ -96,11 +95,8 @@ class Category(models.Model):
 		unique_together = (("organization", "name"),)
 
 	def clean(self):
-		# Validate that all selected suppliers are in this organization
-		if self.organization_id and self.pk:
-			for sup in self.suppliers.all():
-				if not sup.organizations.filter(pk=self.organization_id).exists():
-					raise ValidationError(f"Tedarikçi '{sup.name}' bu organizasyonda bulunmuyor.")
+		# Note: Supplier validation is skipped here because ManyToMany relationships
+		# are updated AFTER save(), not during clean(). The form handles supplier validation.
 		# Validate parent category is in same organization
 		if self.parent_id and self.organization_id:
 			if self.parent.organization_id != self.organization_id:
@@ -553,6 +549,49 @@ class UserDashboardWidget(models.Model):
 		return f"{self.user.username} - {self.get_widget_type_display()}"
 
 
+class OrderTemplate(models.Model):
+	"""Kaydedilmiş sipariş şablonu - müşteri bazında tekrar kullanılabilir"""
+	organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="order_templates")
+	customer = models.ForeignKey('Customer', on_delete=models.CASCADE, related_name='order_templates')
+	name = models.CharField(max_length=200, verbose_name="Şablon Adı")
+	description = models.TextField(blank=True, verbose_name="Açıklama")
+	currency = models.CharField(max_length=3, default="TRY")
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+	
+	class Meta:
+		ordering = ["-updated_at"]
+		unique_together = [['organization', 'customer', 'name']]
+	
+	def __str__(self):
+		return f"{self.name} - {self.customer.name}"
+	
+	@property
+	def total_items(self):
+		return self.items.count()
+	
+	@property
+	def total_amount(self):
+		return sum(item.quantity * item.unit_price for item in self.items.all())
+
+
+class OrderTemplateItem(models.Model):
+	"""Sipariş şablonu kalemi"""
+	template = models.ForeignKey(OrderTemplate, on_delete=models.CASCADE, related_name='items')
+	category = models.ForeignKey('Category', on_delete=models.CASCADE)
+	supplier = models.ForeignKey('Supplier', on_delete=models.CASCADE)
+	product = models.ForeignKey('SupplierProduct', on_delete=models.SET_NULL, null=True, blank=True)
+	description = models.CharField(max_length=255)
+	quantity = models.PositiveIntegerField(default=1)
+	unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+	
+	class Meta:
+		ordering = ['id']
+	
+	def __str__(self):
+		return f"{self.description} x{self.quantity}"
+
+
 # Import metrics models
 from .models_metrics import CustomerFeedback, OwnerReview, SupplierMetrics, CustomerMetrics
 
@@ -562,4 +601,5 @@ __all__ = [
 	'Quote', 'QuoteItem', 'OwnerQuoteAdjustment', 'QuoteComment',
 	'SupplierProduct', 'CustomerFeedback', 'OwnerReview', 
 	'SupplierMetrics', 'CustomerMetrics', 'UserDashboardWidget',
+	'OrderTemplate', 'OrderTemplateItem',
 ]

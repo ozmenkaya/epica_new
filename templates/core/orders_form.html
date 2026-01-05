@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load form_tags %}
+{% block title %}{{ org.name }} - {% trans "Yeni Sipariş" %}{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">{% trans "Yeni Sipariş Oluştur" %}</h5>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'orders_list' %}">{% trans "Siparişler" %}</a>
+  </div>
+  <div class="card-body">
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger mb-3">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-6">{% bootstrap_field form.customer %}</div>
+        <div class="col-md-6">{% bootstrap_field form.category %}</div>
+        <div class="col-md-6">{% bootstrap_field form.supplier %}</div>
+        <div class="col-md-6">{% bootstrap_field form.product %}</div>
+        <div class="col-md-12">{% bootstrap_field form.title %}</div>
+        <div class="col-12">{% bootstrap_field form.description %}</div>
+        <div class="col-md-3">{% bootstrap_field form.quantity %}</div>
+        <div class="col-md-3">{% bootstrap_field form.unit_price %}</div>
+        <div class="col-md-3">{% bootstrap_field form.currency %}</div>
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" type="submit">{% trans "Sipariş Oluştur" %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'orders_list' %}">{% trans "İptal" %}</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const supplierSelect = document.getElementById('id_supplier');
+  const productSelect = document.getElementById('id_product');
+  const titleInput = document.getElementById('id_title');
+  const unitPriceInput = document.getElementById('id_unit_price');
+  
+  // Product data from server
+  const allProducts = {{ products_json|safe }};
+  
+  // Filter products when supplier changes
+  if (supplierSelect && productSelect) {
+    supplierSelect.addEventListener('change', function() {
+      const supplierId = parseInt(this.value);
+      
+      // Clear and rebuild product options
+      productSelect.innerHTML = '<option value="">---------</option>';
+      
+      if (supplierId) {
+        const filtered = allProducts.filter(p => p.supplier_id === supplierId);
+        filtered.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name + (p.base_price ? ' (' + p.base_price + ' TRY)' : '');
+          opt.dataset.price = p.base_price || '';
+          opt.dataset.name = p.name;
+          productSelect.appendChild(opt);
+        });
+      }
+    });
+    
+    // Auto-fill title and price when product selected
+    productSelect.addEventListener('change', function() {
+      const selectedOption = this.options[this.selectedIndex];
+      if (selectedOption && selectedOption.value) {
+        const productName = selectedOption.dataset.name;
+        const productPrice = selectedOption.dataset.price;
+        
+        if (productName && !titleInput.value) {
+          titleInput.value = productName;
+        }
+        if (productPrice && !unitPriceInput.value) {
+          unitPriceInput.value = productPrice;
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

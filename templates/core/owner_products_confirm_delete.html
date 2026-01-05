@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ org.name }} - {% trans "Ürün Sil" %}{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-header">
+    <h5 class="mb-0">{% trans "Ürün Sil" %}</h5>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-warning">
+      <strong>{% trans "Dikkat!" %}</strong> 
+      {% blocktrans with name=obj.name %}Bu ürünü silmek istediğinizden emin misiniz: "{{ name }}"?{% endblocktrans %}
+    </div>
+    <dl class="row mb-4">
+      <dt class="col-sm-3">{% trans "Ürün Adı" %}</dt>
+      <dd class="col-sm-9">{{ obj.name }}</dd>
+      <dt class="col-sm-3">{% trans "Tedarikçi" %}</dt>
+      <dd class="col-sm-9">{{ obj.supplier.name }}</dd>
+      <dt class="col-sm-3">{% trans "Kategori" %}</dt>
+      <dd class="col-sm-9">{{ obj.category.name }}</dd>
+      <dt class="col-sm-3">{% trans "Müşteri" %}</dt>
+      <dd class="col-sm-9">{% if obj.customer %}{{ obj.customer.name }}{% else %}Genel{% endif %}</dd>
+    </dl>
+    <form method="post">
+      {% csrf_token %}
+      <div class="d-flex gap-2">
+        <button class="btn btn-danger" type="submit">{% trans "Evet, Sil" %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'owner_products_list' %}">{% trans "İptal" %}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
